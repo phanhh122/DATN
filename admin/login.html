@@ -256,8 +256,10 @@
 
     <script>
         const API_BASE = (() => {
-            if (location.protocol === 'file:') return 'http://localhost:3000';
-            return `${location.protocol}//${location.hostname}:3000`;
+            if (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:') {
+                return 'http://localhost:3000';
+            }
+            return '';
         })();
 
         // Redirect if already logged in as admin

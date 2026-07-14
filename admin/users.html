@@ -80,7 +80,7 @@
     <div id="toast-container"></div>
 
     <script>
-        const API_BASE = location.port==='3000'?'':`${location.protocol}//${location.hostname}:3000`;
+        const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')?'http://localhost:3000' : '';
         const adminUser = (() => { try { return JSON.parse(localStorage.getItem('adminUser')); } catch { return null; } })();
         if (!adminUser || adminUser.role !== 'admin') {
             location.replace('login.html?reason=noperm');
