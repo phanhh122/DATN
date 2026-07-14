@@ -289,10 +289,10 @@ function showSRSResult() {
         breakEl.innerHTML = '';
     }
 
-    const msg = pct >= 90 ? '<i class="fa-solid fa-trophy"></i> Xuất sắc! Bộ nhớ dài hạn của bạn rất tốt!'
-              : pct >= 70 ? '<i class="fa-solid fa-thumbs-up"></i> Tốt lắm! Tiếp tục duy trì!'
-              : pct >= 50 ? '<i class="fa-solid fa-book"></i> Cần luyện thêm — FSRS sẽ ưu tiên các từ bạn chưa nhớ.'
-              : '<i class="fa-solid fa-heart"></i> Đừng nản! FSRS sẽ lên lịch ôn lại đúng lúc để giúp bạn nhớ lâu hơn.';
+    const msg = pct >= 90 ? '<Xuất sắc! Bộ nhớ dài hạn của bạn rất tốt!'
+              : pct >= 70 ? 'Tốt lắm! Tiếp tục duy trì!'
+              : pct >= 50 ? 'Cần luyện thêm — FSRS sẽ ưu tiên các từ bạn chưa nhớ.'
+              : 'Đừng nản! FSRS sẽ lên lịch ôn lại đúng lúc để giúp bạn nhớ lâu hơn.';
     _setText('srs-result-msg', msg);
 }
 
