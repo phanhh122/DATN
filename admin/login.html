@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HSK Admin — Đăng nhập</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.css"></link>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap');
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+         :root {
+            --primary: #4F46E5;
+            --primary-glow: rgba(79, 70, 229, 0.35);
+            --success: #10B981;
+            --danger: #EF4444;
+            --bg: #0F172A;
+            --bg2: #1E293B;
+            --bg3: #334155;
+            --text: #F1F5F9;
+            --muted: #94A3B8;
+            --border: rgba(148, 163, 184, 0.12);
+        }
+        
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        /* Animated background */
+        
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse 80% 50% at 20% 20%, rgba(79, 70, 229, 0.15) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 80% 80%, rgba(16, 185, 129, 0.08) 0%, transparent 60%);
+            pointer-events: none;
+        }
+        
+        .grid-bg {
+            position: fixed;
+            inset: 0;
+            background-image: linear-gradient(rgba(79, 70, 229, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(79, 70, 229, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+        }
+        
+        .card {
+            position: relative;
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 48px;
+            width: 420px;
+            box-shadow: 0 0 60px rgba(79, 70, 229, 0.12), 0 24px 48px rgba(0, 0, 0, 0.4);
+            animation: fadeUp 0.5s ease;
+        }
+        
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 36px;
+        }
+        
+        .logo-icon {
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, var(--primary), #818CF8);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Syne', sans-serif;
+            font-size: 20px;
+            font-weight: 800;
+            color: #fff;
+            box-shadow: 0 0 20px var(--primary-glow);
+        }
+        
+        .logo-text {
+            font-family: 'Syne', sans-serif;
+            font-size: 22px;
+            font-weight: 800;
+        }
+        
+        .logo-text span {
+            color: var(--primary);
+        }
+        
+        h1 {
+            font-family: 'Syne', sans-serif;
+            font-size: 26px;
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+        
+        .subtitle {
+            color: var(--muted);
+            font-size: 14px;
+            margin-bottom: 32px;
+        }
+        
+        .field {
+            margin-bottom: 18px;
+        }
+        
+        label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 8px;
+        }
+        
+        input {
+            width: 100%;
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 16px;
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        
+        input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+        }
+        
+        .btn {
+            width: 100%;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 14px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+            margin-top: 8px;
+            box-shadow: 0 4px 20px var(--primary-glow);
+        }
+        
+        .btn:hover {
+            opacity: 0.9;
+        }
+        
+        .btn:active {
+            transform: scale(0.98);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .error {
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #FCA5A5;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 13px;
+            margin-bottom: 16px;
+            display: none;
+        }
+        
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(79, 70, 229, 0.1);
+            border: 1px solid rgba(79, 70, 229, 0.2);
+            color: #818CF8;
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: 11px;
+            font-family: 'DM Mono', monospace;
+            margin-top: 28px;
+        }
+        
+        .badge::before {
+            content: '⚙️';
+        }
+
+        .warn-banner {
+            background: rgba(252, 211, 77, 0.12);
+            border: 1px solid rgba(252, 211, 77, 0.3);
+            color: #FCD34D;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 13px;
+            margin-bottom: 16px;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="grid-bg"></div>
+    <div class="card">
+        <div class="logo">
+            <div class="logo-icon">汉</div>
+            <div class="logo-text">HSK <span>Admin</span></div>
+        </div>
+        <h1>Đăng nhập</h1>
+        <p class="subtitle">Chỉ dành cho quản trị viên hệ thống</p>
+
+        <div class="warn-banner" id="warn-banner"></div>
+        <div class="error" id="error-msg"></div>
+
+        <div class="field">
+            <label>Tên đăng nhập</label>
+            <input type="text" id="username" placeholder="admin" autocomplete="username">
+        </div>
+        <div class="field">
+            <label>Mật khẩu</label>
+            <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
+        </div>
+
+        <button class="btn" id="login-btn" onclick="doLogin()">Đăng nhập</button>
+
+        <div class="badge">Admin Portal · HSK Flashcard System</div>
+    </div>
+
+    <script>
+        const API_BASE = (() => {
+            if (location.protocol === 'file:') return 'http://localhost:3000';
+            return `${location.protocol}//${location.hostname}:3000`;
+        })();
+
+        // Redirect if already logged in as admin
+        const stored = localStorage.getItem('adminUser');
+        if (stored) {
+            try {
+                const u = JSON.parse(stored);
+                if (u.role === 'admin') location.replace('dashboard.html');
+            } catch {}
+        }
+
+        // Hiển thị lý do bị chuyển hướng về trang đăng nhập (nếu có)
+        (function showRedirectReason() {
+            const params = new URLSearchParams(location.search);
+            const reason = params.get('reason');
+            const reasons = {
+                expired: '<i class="fa-solid fa-clock"></i> Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+                noperm:  '<i class="fa-solid fa-user-lock"></i> Bạn không có quyền truy cập trang quản trị. Vui lòng đăng nhập bằng tài khoản admin.',
+                logout:  '<i class="fa-solid fa-sign-out-alt"></i> Bạn đã đăng xuất khỏi trang quản trị.'
+            };
+            if (reason && reasons[reason]) {
+                const el = document.getElementById('warn-banner');
+                el.innerHTML = reasons[reason];
+                el.style.display = 'block';
+            }
+        })();
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Enter') doLogin();
+        });
+
+        async function doLogin() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('login-btn');
+            const errEl = document.getElementById('error-msg');
+
+            errEl.style.display = 'none';
+            if (!username || !password) return showError('Vui lòng nhập đầy đủ thông tin');
+
+            btn.disabled = true;
+            btn.textContent = 'Đang xác thực...';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username,
+                        password
+                    })
+                });
+                const data = await res.json();
+
+                if (!res.ok) return showError(data.message || 'Sai tài khoản hoặc mật khẩu');
+
+                if (data.role !== 'admin') {
+                    return showError('Tài khoản này không có quyền quản trị. Vui lòng đăng nhập bằng tài khoản admin.');
+                }
+
+                localStorage.setItem('adminUser', JSON.stringify(data));
+                localStorage.setItem('token', data.token);
+
+                location.replace('dashboard.html');
+            } catch {
+                showError('Không kết nối được server');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Đăng nhập';
+            }
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('error-msg');
+            el.innerHTML = '<i class="fa-solid fa-exclamation-circle"></i> ' + msg;
+            el.style.display = 'block';
+        }
+    </script>
+</body>
+
+</html>

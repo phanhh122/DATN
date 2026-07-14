@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HSK Admin — AI Cache</title>
+    <link rel="stylesheet" href="admin-shared.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.css"></link>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-logo"><div class="icon">汉</div><div class="name">HSK <span>Admin</span></div></div>
+        <div class="sidebar-nav">
+        <div class="nav-section">
+            <div class="nav-label">Tổng quan</div>
+            <a href="dashboard.html" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-chart-line"></i></span> Dashboard</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-label">Quản lý</div>
+            <a href="users.html" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-users"></i></span> Người dùng</a>
+            <a href="vocabulary.html" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-book"></i></span> Từ vựng</a>
+            <a href="cache.html" class="nav-item active"><span class="nav-icon"><i class="fa-solid fa-memory"></i></span> AI Cache</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-label">Hệ thống</div>
+            <a href="../index.html" class="nav-item" target="_blank"><span class="nav-icon"><i class="fa-solid fa-globe"></i></span> Xem trang học</a>
+        </div>
+        </div><!-- /sidebar-nav -->
+        <div class="sidebar-footer">
+            <div class="user-chip">
+                <div class="avatar" id="sb-ava">A</div>
+                <div class="info"><div class="uname" id="sb-name">Admin</div><div class="urole"><i class="fa-solid fa-gear"></i> Quản trị viên</div></div>
+            </div>
+            <button class="logout-btn" onclick="doLogout()"><i class="fa-solid fa-sign-out-alt"></i> Đăng xuất</button>
+        </div>
+    </aside>
+
+    <div class="main">
+        <div class="topbar">
+            <div><div class="page-title">AI Cache</div><div class="page-sub" id="cache-count">Quản lý bộ nhớ đệm Gemini API</div></div>
+            <div style="display:flex;gap:8px">
+                <button class="btn btn-ghost btn-sm" onclick="loadCache()"><i class="fa-solid fa-sync"></i> Làm mới</button>
+                <button class="btn btn-danger btn-sm" onclick="clearAll()"><i class="fa-solid fa-trash"></i> Xóa tất cả</button>
+            </div>
+        </div>
+        <div class="content">
+            <!-- Stats -->
+            <div class="stat-grid" style="margin-bottom:20px">
+                <div class="stat-card blue">
+                    <div class="stat-icon"><i class="fa-solid fa-database"></i></div>
+                    <div class="stat-label">Entries đã cache</div>
+                    <div class="stat-value" id="s-total">—</div>
+                </div>
+                <div class="stat-card green">
+                    <div class="stat-icon"><i class="fa-solid fa-bolt"></i></div>
+                    <div class="stat-label">Tổng lượt cache hit</div>
+                    <div class="stat-value" id="s-hits">—</div>
+                </div>
+                <div class="stat-card orange">
+                    <div class="stat-icon"><i class="fa-solid fa-coins"></i></div>
+                    <div class="stat-label">Chi phí tiết kiệm ước tính</div>
+                    <div class="stat-value" id="s-saved">—</div>
+                </div>
+                <div class="stat-card purple">
+                    <div class="stat-icon"><i class="fa-solid fa-chart-bar"></i></div>
+                    <div class="stat-label">Hit rate trung bình</div>
+                    <div class="stat-value" id="s-rate">—</div>
+                </div>
+            </div>
+
+            <!-- Explanation -->
+            <div class="chart-card" style="margin-bottom:20px;padding:16px">
+                <div class="chart-title" style="margin-bottom:8px"><i class="fa-solid fa-info-circle"></i> Cách hoạt động của AI Cache</div>
+                <div style="font-size:13px;color:var(--muted);line-height:1.7">
+                    Khi người dùng hỏi AI Trợ lý, hệ thống băm (SHA-256) nội dung câu hỏi thành một key duy nhất.
+                    Nếu câu hỏi đó đã được hỏi trước đây, hệ thống trả về kết quả đã lưu thay vì gọi Gemini API.
+                    Điều này giúp tiết kiệm quota API và tăng tốc độ phản hồi đáng kể.
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+                <input type="text" id="search-input" placeholder="Tìm theo nội dung phản hồi..."
+                    style="flex:1;min-width:200px;padding:9px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px"
+                    oninput="filterCache()">
+                <select id="kind-filter" onchange="filterCache()"
+                    style="padding:9px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px">
+                    <option value="">Tất cả loại</option>
+                    <option value="chat">chat</option>
+                    <option value="recommend">recommend</option>
+                    <option value="quiz_gen">quiz_gen</option>
+                </select>
+            </div>
+
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead><tr>
+                        <th>Loại</th>
+                        <th>Key (SHA-256)</th>
+                        <th>Nội dung phản hồi</th>
+                        <th>Hits</th>
+                        <th>Tạo lúc</th>
+                        <th>Xóa</th>
+                    </tr></thead>
+                    <tbody id="cache-table"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script>
+        const API_BASE = location.port==='3000'?'':`${location.protocol}//${location.hostname}:3000`;
+        const adminUser = (() => { try { return JSON.parse(localStorage.getItem('adminUser')); } catch { return null; } })();
+        if (!adminUser || adminUser.role !== 'admin') {
+            location.replace('login.html?reason=noperm');
+            throw new Error('Chua dang nhap admin - dang chuyen huong');
+        }
+        document.getElementById('sb-name').textContent = adminUser.name||adminUser.username;
+        document.getElementById('sb-ava').textContent  = (adminUser.name||adminUser.username||'A')[0].toUpperCase();
+        const hdrs = () => ({ 'Authorization': `Bearer ${adminUser.token}` });
+
+        function handleAuthFailure(status) {
+            localStorage.removeItem('adminUser');
+            location.replace(`login.html?reason=${status === 403 ? 'noperm' : 'expired'}`);
+        }
+
+        let _rows = [];
+        const kindColors = { chat:'#818CF8', recommend:'#6EE7B7', quiz_gen:'#FCD34D' };
+
+        async function loadCache() {
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/ai-cache`, { headers: hdrs() });
+                if (res.status === 401 || res.status === 403) return handleAuthFailure(res.status);
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const { rows, stats } = await res.json();
+                _rows = rows || [];
+
+                const total = stats?.total || 0;
+                const hits  = stats?.total_hits || 0;
+                const saved = (hits * 0.002).toFixed(3);
+                const rate  = total > 0 ? Math.round(hits / total) : 0;
+
+                document.getElementById('s-total').textContent = total;
+                document.getElementById('s-hits').textContent  = hits;
+                document.getElementById('s-saved').textContent = `~$${saved}`;
+                document.getElementById('s-rate').textContent  = `${rate}x / entry`;
+
+                filterCache();
+            } catch(e) {
+                showToast('Lỗi tải cache: ' + e.message, 'error');
+            }
+        }
+
+        function filterCache() {
+            const q    = (document.getElementById('search-input')?.value||'').toLowerCase();
+            const kind = document.getElementById('kind-filter')?.value||'';
+            const list = _rows.filter(r =>
+                (!q || (r.response_preview||'').toLowerCase().includes(q)) &&
+                (!kind || r.kind === kind)
+            );
+            document.getElementById('cache-count').textContent = `Hiển thị ${list.length} / ${_rows.length} entries`;
+            document.getElementById('cache-table').innerHTML = list.map(r => `
+                <tr>
+                    <td><span class="badge badge-admin" style="background:${kindColors[r.kind]||'#94A3B8'}20;color:${kindColors[r.kind]||'#94A3B8'};font-size:11px">${r.kind}</span></td>
+                    <td style="font-family:monospace;font-size:11px;color:var(--muted)">${r.key_preview}...</td>
+                    <td style="max-width:300px;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.response_preview)}</td>
+                    <td style="font-weight:700;color:#6EE7B7">${r.hit_count}</td>
+                    <td style="font-size:11px;color:var(--muted)">${new Date(r.created_at).toLocaleDateString('vi-VN')}</td>
+                    <td><button class="btn btn-sm btn-danger" onclick="deleteEntry(${r.id})">✕</button></td>
+                </tr>`).join('') || `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:40px">Không có cache nào khớp bộ lọc</td></tr>`;
+        }
+
+        async function deleteEntry(id) {
+            const res = await fetch(`${API_BASE}/api/admin/ai-cache/${id}`, { method:'DELETE', headers: hdrs() });
+            if (res.ok) { showToast('Đã xóa entry'); await loadCache(); }
+            else showToast('Lỗi xóa', 'error');
+        }
+
+        async function clearAll() {
+            if (!confirm('Xóa toàn bộ AI Cache? Các câu hỏi sẽ phải gọi lại Gemini API.')) return;
+            const res = await fetch(`${API_BASE}/api/admin/ai-cache`, { method:'DELETE', headers: hdrs() });
+            if (res.ok) { showToast('Đã xóa toàn bộ cache'); await loadCache(); }
+            else showToast('Lỗi xóa', 'error');
+        }
+
+        function doLogout() { localStorage.removeItem('adminUser'); location.replace('login.html?reason=logout'); }
+        function esc(s) { const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+        function showToast(msg, type='success') {
+            const c=document.getElementById('toast-container');
+            const t=document.createElement('div'); t.className=`toast ${type}`;
+            t.innerHTML=(type==='success'?'<i class="fa-solid fa-check"></i> ':'<i class="fa-solid fa-times"></i> ')+msg; c.appendChild(t);
+            setTimeout(()=>t.remove(), 3500);
+        }
+        loadCache();
+    </script>
+</body>
+</html>

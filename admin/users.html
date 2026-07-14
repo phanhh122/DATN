@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HSK Admin — Người dùng</title>
+    <link rel="stylesheet" href="admin-shared.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.css"></link>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-logo"><div class="icon">汉</div><div class="name">HSK <span>Admin</span></div></div>
+        <div class="sidebar-nav">
+        <div class="nav-section">
+            <div class="nav-label">Tổng quan</div>
+            <a href="dashboard.html" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-chart-line"></i></span> Dashboard</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-label">Quản lý</div>
+            <a href="users.html" class="nav-item active"><span class="nav-icon"><i class="fa-solid fa-users"></i></span> Người dùng</a>
+            <a href="vocabulary.html" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-book"></i></span> Từ vựng</a>
+            <a href="cache.html" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-memory"></i></span> AI Cache</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-label">Hệ thống</div>
+            <a href="../index.html" class="nav-item" target="_blank"><span class="nav-icon"><i class="fa-solid fa-globe"></i></span> Xem trang học</a>
+        </div>
+        </div><!-- /sidebar-nav -->
+        <div class="sidebar-footer">
+            <div class="user-chip">
+                <div class="avatar" id="sb-ava">A</div>
+                <div class="info"><div class="uname" id="sb-name">Admin</div><div class="urole"><i class="fa-solid fa-gear"></i> Quản trị viên</div></div>
+            </div>
+            <button class="logout-btn" onclick="doLogout()"><i class="fa-solid fa-sign-out-alt"></i> Đăng xuất</button>
+        </div>
+    </aside>
+
+    <div class="main">
+        <div class="topbar">
+            <div><div class="page-title">Người dùng</div><div class="page-sub" id="user-count">Đang tải...</div></div>
+            <button class="btn btn-ghost btn-sm" onclick="loadUsers()"><i class="fa-solid fa-sync"></i> Làm mới</button>
+        </div>
+        <div class="content">
+            <!-- Filters -->
+            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+                <input type="text" id="search-input" placeholder="Tìm tên / username..."
+                    style="flex:1;min-width:200px;padding:9px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px"
+                    oninput="filterUsers()">
+                <select id="role-filter" onchange="filterUsers()"
+                    style="padding:9px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px">
+                    <option value="">Tất cả role</option>
+                    <option value="admin">Admin</option>
+                    <option value="user">User</option>
+                </select>
+            </div>
+
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead><tr>
+                        <th>ID</th><th>Tên</th><th>Username</th><th>Role</th>
+                        <th>Từ đã học</th><th>Streak</th><th>Hoạt động</th><th>Hành động</th>
+                    </tr></thead>
+                    <tbody id="user-table"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Detail Modal -->
+    <div id="detail-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:999;align-items:center;justify-content:center;padding:16px">
+        <div style="background:var(--bg2);border-radius:16px;padding:28px;max-width:580px;width:100%;max-height:85vh;overflow-y:auto;border:1px solid var(--border)">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
+                <h2 id="detail-title" style="font-size:18px;font-weight:700;margin:0"></h2>
+                <button onclick="closeDetail()" style="border:none;background:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
+            </div>
+            <div id="detail-content"></div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script>
+        const API_BASE = location.port==='3000'?'':`${location.protocol}//${location.hostname}:3000`;
+        const adminUser = (() => { try { return JSON.parse(localStorage.getItem('adminUser')); } catch { return null; } })();
+        if (!adminUser || adminUser.role !== 'admin') {
+            location.replace('login.html?reason=noperm');
+            throw new Error('Chua dang nhap admin - dang chuyen huong');
+        }
+        document.getElementById('sb-name').textContent = adminUser.name||adminUser.username;
+        document.getElementById('sb-ava').textContent  = (adminUser.name||adminUser.username||'A')[0].toUpperCase();
+        const hdrs = () => ({ 'Authorization': `Bearer ${adminUser.token}` });
+
+        function handleAuthFailure(status) {
+            localStorage.removeItem('adminUser');
+            location.replace(`login.html?reason=${status === 403 ? 'noperm' : 'expired'}`);
+        }
+
+        let _allUsers = [];
+
+        async function loadUsers() {
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/users`, { headers: hdrs() });
+                if (res.status === 401 || res.status === 403) return handleAuthFailure(res.status);
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+                // API trả về { users: [...], totalWords } — không phải array trực tiếp
+                _allUsers = Array.isArray(data) ? data : (data.users || []);
+                filterUsers();
+            } catch (e) { showToast('Lỗi tải users: ' + e.message, 'error'); }
+        }
+
+        function filterUsers() {
+            const q    = (document.getElementById('search-input')?.value||'').toLowerCase();
+            const role = document.getElementById('role-filter')?.value||'';
+            const list = _allUsers.filter(u =>
+                (!q || (u.name||u.username||'').toLowerCase().includes(q) || (u.username||'').toLowerCase().includes(q)) &&
+                (!role || u.role === role)
+            );
+            document.getElementById('user-count').textContent = `${list.length} / ${_allUsers.length} người dùng`;
+            document.getElementById('user-table').innerHTML = list.map(u => `
+                <tr>
+                    <td style="color:var(--muted);font-size:12px">#${u.id}</td>
+                    <td style="font-weight:600">${esc(u.name||u.username)}</td>
+                    <td style="color:var(--muted)">@${esc(u.username)}</td>
+                    <td><span class="badge ${u.role==='admin'?'badge-admin':'badge-user'}">${u.role}</span></td>
+                    <td style="font-weight:600;color:#6EE7B7">${u.words_learned||0}</td>
+                    <td><i class="fa-solid fa-fire"></i> ${u.streak||0}</td>
+                    <td style="font-size:12px;color:var(--muted)">${u.last_active_date ? new Date(u.last_active_date).toLocaleDateString('vi-VN') : '—'}</td>
+                    <td>
+                        <div style="display:flex;gap:6px;flex-wrap:wrap">
+                            <button class="btn btn-sm btn-ghost" onclick="showDetail(${u.id})"><i class="fa-solid fa-eye"></i> Chi tiết</button>
+                            <select onchange="changeRole(${u.id},this.value)"
+                                style="padding:4px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px">
+                                <option ${u.role==='user'?'selected':''} value="user">User</option>
+                                <option ${u.role==='admin'?'selected':''} value="admin">Admin</option>
+                            </select>
+                            <button class="btn btn-sm btn-ghost" title="Reset tiến độ học" onclick="resetProgress(${u.id},'${esc(u.username)}')"><i class="fa-solid fa-sync"></i></button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id},'${esc(u.username)}')"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>`).join('');
+        }
+
+        async function showDetail(uid) {
+            const modal = document.getElementById('detail-modal');
+            document.getElementById('detail-title').textContent = 'Chi tiết người dùng';
+            document.getElementById('detail-content').innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted)"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải...</div>';
+            modal.style.display = 'flex';
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/users/${uid}/detail`, { headers: hdrs() });
+                if (res.status === 401 || res.status === 403) return handleAuthFailure(res.status);
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const d = await res.json();
+                const u = d.user, s = d.srsStats||{};
+                document.getElementById('detail-title').textContent = u.name || u.username;
+                document.getElementById('detail-content').innerHTML = `
+                    <div style="color:var(--muted);font-size:13px;margin-bottom:16px">@${esc(u.username)} · ${u.role} · ${u.email||'Chưa có email'}</div>
+                    <div class="stat-grid" style="margin-bottom:20px">
+                        <div class="stat-card green" style="padding:14px;text-align:center"><div class="stat-label">Đã học</div><div class="stat-value" style="font-size:22px">${u.words_learned||0}</div></div>
+                        <div class="stat-card orange" style="padding:14px;text-align:center"><div class="stat-label">Streak</div><div class="stat-value" style="font-size:22px"><i class="fa-solid fa-fire"></i> ${u.streak||0}</div></div>
+                        <div class="stat-card blue" style="padding:14px;text-align:center"><div class="stat-label">FSRS Thẻ</div><div class="stat-value" style="font-size:22px">${s.cards_in_srs||0}</div></div>
+                        <div class="stat-card purple" style="padding:14px;text-align:center"><div class="stat-label">Retention</div><div class="stat-value" style="font-size:22px">${s.retention||0}%</div></div>
+                    </div>
+                    <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:var(--muted)">ĐỘ CHÍNH XÁC THEO CẤP HSK</div>
+                    ${(d.byLevel||[]).map(l => `
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+                            <span style="min-width:48px;font-size:13px;font-weight:600;color:#818CF8">HSK${l.hsk_level}</span>
+                            <div style="flex:1;height:8px;background:var(--bg3);border-radius:4px">
+                                <div style="height:8px;border-radius:4px;background:${(l.accuracy||0)>=80?'#6EE7B7':(l.accuracy||0)>=60?'#FCD34D':'#FCA5A5'};width:${l.accuracy||0}%"></div>
+                            </div>
+                            <span style="font-size:13px;font-weight:600;min-width:36px;text-align:right">${l.accuracy||0}%</span>
+                        </div>`).join('')}
+                    <div style="font-weight:700;font-size:13px;margin:16px 0 10px;color:var(--muted)">LỊCH SỬ ÔN TẬP GẦN NHẤT</div>
+                    ${(d.quizHistory||[]).slice(0,8).map(q => `
+                        <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px">
+                            <span style="font-size:17px;font-weight:700;color:#818CF8;min-width:36px">${esc(q.hanzi)}</span>
+                            <span style="flex:1;color:var(--muted)">${esc(q.meaning)}</span>
+                            <span style="color:${q.is_correct?'#6EE7B7':'#FCA5A5'};font-weight:600">${q.is_correct?'✓':'✗'}</span>
+                            <span style="color:var(--muted);font-size:11px">${q.source}</span>
+                        </div>`).join('')}`;
+            } catch (e) {
+                document.getElementById('detail-content').innerHTML = `<div style="color:#FCA5A5">Lỗi: ${e.message}</div>`;
+            }
+        }
+
+        function closeDetail() { document.getElementById('detail-modal').style.display='none'; }
+
+        async function resetProgress(uid, username) {
+            if (!confirm(`Reset toàn bộ tiến độ học (từ đã học, streak) của @${username}? Hành động này không thể hoàn tác.`)) return;
+            const res = await fetch(`${API_BASE}/api/admin/users/${uid}`, {
+                method:'PUT', headers:{...hdrs(),'Content-Type':'application/json'},
+                body: JSON.stringify({ reset_progress: true })
+            });
+            if (res.ok) { showToast('Đã reset tiến độ học'); await loadUsers(); }
+            else showToast('Lỗi reset tiến độ', 'error');
+        }
+
+        async function changeRole(uid, role) {
+            const res = await fetch(`${API_BASE}/api/admin/users/${uid}`, {
+                method:'PUT', headers:{...hdrs(),'Content-Type':'application/json'},
+                body: JSON.stringify({ role })
+            });
+            if (res.ok) showToast(`Đã đổi role thành ${role}`);
+            else showToast('Lỗi đổi role', 'error');
+        }
+
+        async function deleteUser(uid, username) {
+            if (!confirm(`Xóa tài khoản @${username}?`)) return;
+            const res = await fetch(`${API_BASE}/api/admin/users/${uid}`, { method:'DELETE', headers: hdrs() });
+            if (res.ok) { showToast('Đã xóa tài khoản'); await loadUsers(); }
+            else showToast('Lỗi xóa', 'error');
+        }
+
+        function doLogout() { localStorage.removeItem('adminUser'); location.replace('login.html?reason=logout'); }
+        function esc(s) { const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+        function showToast(msg, type='success') {
+            const c=document.getElementById('toast-container');
+            const t=document.createElement('div'); t.className=`toast ${type}`;
+            t.innerHTML=(type==='success'?'<i class="fa-solid fa-check"></i> ':'<i class="fa-solid fa-times"></i> ')+msg; c.appendChild(t);
+            setTimeout(()=>t.remove(), 3500);
+        }
+        loadUsers();
+    </script>
+</body>
+</html>

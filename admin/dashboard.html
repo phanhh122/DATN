@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HSK Admin — Dashboard</title>
+    <link rel="stylesheet" href="admin-shared.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.css"></link>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-logo"><div class="icon">汉</div><div class="name">HSK <span>Admin</span></div></div>
+        <div class="sidebar-nav">
+        <div class="nav-section">
+            <div class="nav-label">Tổng quan</div>
+            <a href="dashboard.html" class="nav-item active"><span class="nav-icon"><i class="fa-solid fa-chart-line"></i></span> Dashboard</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-label">Quản lý</div>
+            <a href="users.html" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-users"></i></span> Người dùng</a>
+            <a href="vocabulary.html" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-book"></i></span> Từ vựng</a>
+            <a href="cache.html" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-robot"></i></span> AI Cache</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-label">Hệ thống</div>
+            <a href="../index.html" class="nav-item" target="_blank"><span class="nav-icon"><i class="fa-solid fa-globe"></i></span> Xem trang học</a>
+        </div>
+        </div><!-- /sidebar-nav -->
+        <div class="sidebar-footer">
+            <div class="user-chip">
+                <div class="avatar" id="sb-ava">A</div>
+                <div class="info"><div class="uname" id="sb-name">Admin</div><div class="urole"><i class="fa-solid fa-gear"></i> Quản trị viên</div></div>
+            </div>
+            <button class="logout-btn" onclick="doLogout()"><i class="fa-solid fa-sign-out-alt"></i> Đăng xuất</button>
+        </div>
+    </aside>
+
+    <div class="main">
+        <div class="topbar">
+            <div>
+                <div class="page-title">Dashboard</div>
+                <div class="page-sub" id="date-display"></div>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="loadAll()">↻ Làm mới</button>
+        </div>
+        <div class="content">
+            <!-- Stat cards row 1 -->
+            <div class="stat-grid">
+                <div class="stat-card blue"><div class="stat-icon"><i class="fa-solid fa-users"></i></div><div class="stat-label">Tổng Users</div><div class="stat-value" id="s-users">—</div></div>
+                <div class="stat-card green"><div class="stat-icon"><i class="fa-solid fa-book"></i></div><div class="stat-label">Từ vựng</div><div class="stat-value" id="s-vocab">—</div></div>
+                <div class="stat-card orange"><div class="stat-icon"><i class="fa-solid fa-fire"></i></div><div class="stat-label">Active hôm nay</div><div class="stat-value" id="s-active">—</div></div>
+                <div class="stat-card red"><div class="stat-icon"><i class="fa-solid fa-graduation-cap"></i></div><div class="stat-label">Từ đã học (toàn HT)</div><div class="stat-value" id="s-learned">—</div></div>
+            </div>
+            <!-- Stat cards row 2: FSRS + AI Cache -->
+            <div class="stat-grid" style="margin-top:16px">
+                <div class="stat-card purple"><div class="stat-icon"><i class="fa-solid fa-brain"></i></div><div class="stat-label">Dùng FSRS</div><div class="stat-value" id="s-srs-users">—</div></div>
+                <div class="stat-card blue"><div class="stat-icon"><i class="fa-solid fa-chart-bar"></i></div><div class="stat-label">Ghi nhớ TB (SRS)</div><div class="stat-value" id="s-retention">—%</div></div>
+                <div class="stat-card green"><div class="stat-icon"><i class="fa-solid fa-save"></i></div><div class="stat-label">AI Cache entries</div><div class="stat-value" id="s-cache-entries">—</div></div>
+                <div class="stat-card orange"><div class="stat-icon"><i class="fa-solid fa-bolt"></i></div><div class="stat-label">Cache hits</div><div class="stat-value" id="s-cache-hits">—</div></div>
+            </div>
+
+            <!-- Charts row -->
+            <div class="chart-row">
+                <div class="chart-card">
+                    <div class="chart-title"><i class="fa-solid fa-chart-pie"></i> Phân bổ từ vựng theo HSK</div>
+                    <div class="chart-canvas-wrap"><canvas id="chart-vocab"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title"><i class="fa-solid fa-chart-line"></i> User hoạt động 30 ngày</div>
+                    <div class="chart-canvas-wrap"><canvas id="chart-daily"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Registrations trend -->
+            <div class="chart-card" style="margin-top:20px">
+                <div class="chart-title"><i class="fa-solid fa-user-plus"></i> Đăng ký mới (30 ngày)</div>
+                <div class="chart-canvas-wrap"><canvas id="chart-reg"></canvas></div>
+            </div>
+
+            <!-- Top learners + Most missed -->
+            <div class="chart-row" style="margin-top:20px">
+                <div class="chart-card">
+                    <div class="chart-title"><i class="fa-solid fa-trophy"></i> Top 10 học viên</div>
+                    <div id="top-learners" class="recent-list"></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title"><i class="fa-solid fa-exclamation-triangle"></i> Từ bị sai nhiều nhất</div>
+                    <div id="most-missed" class="recent-list"></div>
+                </div>
+            </div>
+
+            <!-- Recent users -->
+            <div class="chart-card" style="margin-top:20px">
+                <div class="chart-title"><i class="fa-solid fa-clock"></i> Người dùng mới nhất</div>
+                <div class="recent-list" id="recent-users"></div>
+            </div>
+        </div>
+    </div>
+    <div id="toast-container"></div>
+
+    <script>
+        const API_BASE = location.port==='3000'?'':`${location.protocol}//${location.hostname}:3000`;
+        const adminUser = (() => { try { return JSON.parse(localStorage.getItem('adminUser')); } catch { return null; } })();
+        if (!adminUser || adminUser.role !== 'admin') {
+            location.replace('login.html?reason=noperm');
+            throw new Error('Chua dang nhap admin - dang chuyen huong');
+        }
+        document.getElementById('sb-name').textContent = adminUser.name || adminUser.username;
+        document.getElementById('sb-ava').textContent  = (adminUser.name||adminUser.username||'A')[0].toUpperCase();
+        document.getElementById('date-display').textContent = new Date().toLocaleDateString('vi-VN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+        const hdrs = () => ({ 'Authorization': `Bearer ${adminUser.token}` });
+
+        // Nếu token hết hạn / không hợp lệ (401) hoặc mất quyền admin (403),
+        // đưa về trang đăng nhập kèm lý do thay vì hiển thị dữ liệu lỗi im lặng.
+        function handleAuthFailure(status) {
+            localStorage.removeItem('adminUser');
+            location.replace(`login.html?reason=${status === 403 ? 'noperm' : 'expired'}`);
+        }
+
+        let charts = {};
+
+        async function loadAll() {
+            await Promise.all([loadStats(), loadAnalytics()]);
+        }
+
+        async function loadStats() {
+            const res = await fetch(`${API_BASE}/api/admin/stats`, { headers: hdrs() });
+            if (res.status === 401 || res.status === 403) return handleAuthFailure(res.status);
+            if (!res.ok) { showToast('Lỗi tải stats', 'error'); return; }
+            const d = await res.json();
+            document.getElementById('s-users').textContent  = d.totalUsers ?? '—';
+            document.getElementById('s-vocab').textContent  = d.totalVocab ?? d.totalWords ?? '—';
+            document.getElementById('s-active').textContent = d.activeToday ?? '—';
+            document.getElementById('s-learned').textContent = d.totalLearned ?? '—';
+
+            if (Array.isArray(d.recentUsers)) {
+                document.getElementById('recent-users').innerHTML = d.recentUsers.map(u => `
+                    <div class="recent-item">
+                        <div class="ava">${(u.name||u.username||'?')[0].toUpperCase()}</div>
+                        <div class="info">
+                            <div class="rname">${esc(u.name||u.username)}</div>
+                            <div class="rmeta">@${esc(u.username)} · ${u.role==='admin'?'<i class="fa-solid fa-gear"></i> Admin':'<i class="fa-solid fa-user"></i> Học viên'}</div>
+                        </div>
+                        <span class="badge ${u.role==='admin'?'badge-admin':'badge-user'}">${u.role}</span>
+                    </div>`).join('');
+            }
+
+            if (Array.isArray(d.vocabByLevel)) {
+                const labels = d.vocabByLevel.map(r => `HSK ${r.level}`);
+                const values = d.vocabByLevel.map(r => r.count);
+                if (charts.vocab) charts.vocab.destroy();
+                charts.vocab = new Chart(document.getElementById('chart-vocab').getContext('2d'), {
+                    type: 'bar',
+                    data: { labels, datasets: [{ label:'Số từ', data: values,
+                        backgroundColor: ['#818CF8','#6EE7B7','#FCD34D','#FCA5A5','#34D399','#F472B6'],
+                        borderRadius: 6, borderSkipped: false }] },
+                    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+                        scales: { x:{ticks:{color:'#94A3B8'},grid:{color:'rgba(148,163,184,0.08)'}},
+                                  y:{ticks:{color:'#94A3B8'},grid:{color:'rgba(148,163,184,0.08)'},beginAtZero:true} } }
+                });
+            }
+        }
+
+        async function loadAnalytics() {
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/analytics`, { headers: hdrs() });
+                if (res.status === 401 || res.status === 403) return handleAuthFailure(res.status);
+                if (!res.ok) return;
+                const d = await res.json();
+
+                // Row 2 stats
+                document.getElementById('s-srs-users').textContent    = d.retention?.users_using_srs ?? '—';
+                document.getElementById('s-retention').textContent     = (d.retention?.avg_retention ?? '—') + '%';
+                document.getElementById('s-cache-entries').textContent = d.cache?.total_cached ?? '—';
+                document.getElementById('s-cache-hits').textContent    = d.cache?.total_hits ?? '—';
+
+                // Daily active chart
+                if (Array.isArray(d.dailyActive) && d.dailyActive.length) {
+                    const labels = d.dailyActive.map(r => String(r.day).slice(5));
+                    const values = d.dailyActive.map(r => r.count);
+                    if (charts.daily) charts.daily.destroy();
+                    charts.daily = new Chart(document.getElementById('chart-daily').getContext('2d'), {
+                        type: 'line',
+                        data: { labels, datasets:[{ label:'Users active', data:values, fill:true,
+                            backgroundColor:'rgba(129,140,248,0.15)', borderColor:'#818CF8',
+                            pointBackgroundColor:'#818CF8', tension:0.4, pointRadius:3 }] },
+                        options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+                            scales: { x:{ticks:{color:'#94A3B8',maxTicksLimit:10},grid:{color:'rgba(148,163,184,0.08)'}},
+                                      y:{ticks:{color:'#94A3B8'},grid:{color:'rgba(148,163,184,0.08)'},beginAtZero:true} } }
+                    });
+                }
+
+                // Registrations trend
+                if (Array.isArray(d.registrations) && d.registrations.length) {
+                    const labels = d.registrations.map(r => String(r.day).slice(5));
+                    const values = d.registrations.map(r => r.count);
+                    if (charts.reg) charts.reg.destroy();
+                    charts.reg = new Chart(document.getElementById('chart-reg').getContext('2d'), {
+                        type: 'bar',
+                        data: { labels, datasets:[{ label:'Đăng ký mới', data:values,
+                            backgroundColor:'rgba(110,231,183,0.5)', borderColor:'#6EE7B7',
+                            borderRadius:4, borderSkipped:false }] },
+                        options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+                            scales: { x:{ticks:{color:'#94A3B8',maxTicksLimit:10},grid:{color:'rgba(148,163,184,0.08)'}},
+                                      y:{ticks:{color:'#94A3B8',stepSize:1},grid:{color:'rgba(148,163,184,0.08)'},beginAtZero:true} } }
+                    });
+                }
+
+                // Top learners
+                if (Array.isArray(d.topLearners)) {
+                    document.getElementById('top-learners').innerHTML = d.topLearners.map((u,i) => `
+                        <div class="recent-item">
+                            <div class="ava" style="background:#3730a3;font-size:14px;font-weight:800">#${i+1}</div>
+                            <div class="info">
+                                <div class="rname">${esc(u.name||u.username)}</div>
+                                <div class="rmeta">@${esc(u.username)} · <i class="fa-solid fa-fire"></i> ${u.streak||0} ngày</div>
+                            </div>
+                            <span class="badge badge-admin">${u.words_learned||0} từ</span>
+                        </div>`).join('') || '<div class="empty-state">Chưa có dữ liệu</div>';
+                }
+
+                // Most missed
+                if (Array.isArray(d.mostMissed)) {
+                    document.getElementById('most-missed').innerHTML = d.mostMissed.map(w => `
+                        <div class="recent-item">
+                            <div class="ava" style="font-family:serif;font-size:18px;font-weight:700;color:#F472B6;background:rgba(244,114,182,0.15)">${esc(w.hanzi)}</div>
+                            <div class="info">
+                                <div class="rname">${esc(w.meaning)} <span style="font-size:11px;color:#94A3B8">(HSK${w.hsk_level})</span></div>
+                                <div class="rmeta">${w.attempts} lần thử · ${w.wrong_count} sai</div>
+                            </div>
+                            <span class="badge" style="background:#fde8e8;color:#e74c3c">${w.error_rate}% sai</span>
+                        </div>`).join('') || '<div class="empty-state">Cần ≥5 lần thử</div>';
+                }
+            } catch (e) { console.error('[analytics]', e.message); }
+        }
+
+        function doLogout() { localStorage.removeItem('adminUser'); location.replace('login.html?reason=logout'); }
+        function esc(s) { const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+        function showToast(msg, type='success') {
+            const c=document.getElementById('toast-container');
+            const t=document.createElement('div'); t.className=`toast ${type}`;
+            t.textContent=(type==='success'?'<i class="fa-solid fa-check"></i> ':'<i class="fa-solid fa-times"></i> ')+msg; c.appendChild(t);
+            setTimeout(()=>t.remove(), 3500);
+        }
+        loadAll();
+    </script>
+</body>
+</html>

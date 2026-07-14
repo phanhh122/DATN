@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HSK Admin — Từ vựng</title>
+    <link rel="stylesheet" href="admin-shared.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.css"></link>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-logo"><div class="icon">汉</div><div class="name">HSK <span>Admin</span></div></div>
+        <div class="sidebar-nav">
+        <div class="nav-section">
+            <div class="nav-label">Tổng quan</div>
+            <a href="dashboard.html" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-chart-line"></i></span> Dashboard</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-label">Quản lý</div>
+            <a href="users.html" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-users"></i></span> Người dùng</a>
+            <a href="vocabulary.html" class="nav-item active"><span class="nav-icon"><i class="fa-solid fa-book"></i></span> Từ vựng</a>
+            <a href="cache.html" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-robot"></i></span> AI Cache</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-label">Hệ thống</div>
+            <a href="../index.html" class="nav-item" target="_blank"><span class="nav-icon"><i class="fa-solid fa-globe"></i></span> Xem trang học</a>
+        </div>
+        </div><!-- /sidebar-nav -->
+        <div class="sidebar-footer">
+            <div class="user-chip">
+                <div class="avatar" id="sb-ava">A</div>
+                <div class="info"><div class="uname" id="sb-name">Admin</div><div class="urole"><i class="fa-solid fa-gear"></i> Quản trị viên</div></div>
+            </div>
+            <button class="logout-btn" onclick="doLogout()">
+                <i class="fa-solid fa-sign-out-alt"></i> Đăng xuất
+            </button>
+        </div>
+    </aside>
+
+    <div class="main">
+        <div class="topbar">
+            <div><div class="page-title">Từ vựng</div><div class="page-sub" id="vocab-count">Đang tải...</div></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn btn-ghost btn-sm" onclick="exportCSV()">
+                    <i class="fa-solid fa-download"></i> Xuất CSV
+                </button>
+                <label class="btn btn-ghost btn-sm" style="cursor:pointer">
+                    <i class="fa-solid fa-upload"></i> Nhập CSV
+                    <input type="file" accept=".csv" style="display:none" onchange="importCSV(event)">
+                </label>
+                <button class="btn btn-primary btn-sm" onclick="openModal()">
+                    <i class="fa-solid fa-plus"></i> Thêm từ
+                </button>
+            </div>
+        </div>
+        <div class="content">
+            <!-- Filters -->
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+                <input type="text" id="search-input" placeholder="Tìm hanzi / pinyin / nghĩa..."
+                    style="flex:1;min-width:200px;padding:9px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px"
+                    oninput="filterVocab()">
+                <select id="level-filter" onchange="filterVocab()"
+                    style="padding:9px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px">
+                    <option value="0">Tất cả cấp</option>
+                    <option value="1">HSK 1</option><option value="2">HSK 2</option>
+                    <option value="3">HSK 3</option><option value="4">HSK 4</option>
+                    <option value="5">HSK 5</option><option value="6">HSK 6</option>
+                </select>
+                <div style="display:flex;gap:8px;align-items:center">
+                    <span id="sel-count" style="font-size:13px;color:var(--muted)"></span>
+                    <button id="bulk-del-btn" onclick="bulkDelete()" class="btn btn-sm btn-danger" style="display:none">
+                        <i class="fa-solid fa-trash"></i> Xóa đã chọn
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead><tr>
+                        <th><input type="checkbox" id="check-all" onchange="toggleAll(this)"></th>
+                        <th>Hán tự</th><th>Pinyin</th><th>Nghĩa</th>
+                        <th>Loại từ</th><th>Cấp</th><th>Hành động</th>
+                    </tr></thead>
+                    <tbody id="vocab-table"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div id="word-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:999;align-items:center;justify-content:center;padding:16px">
+        <div style="background:var(--bg2);border-radius:16px;padding:28px;max-width:540px;width:100%;max-height:90vh;overflow-y:auto;border:1px solid var(--border)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                <h2 id="modal-title" style="font-size:18px;font-weight:700;margin:0">Thêm từ vựng</h2>
+                <button onclick="closeModal()" style="border:none;background:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
+            </div>
+            <input type="hidden" id="edit-id">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+                <div><label class="form-label">Hán tự *</label><input id="f-hanzi" class="form-input" style="font-family:serif;font-size:20px" placeholder="你好"></div>
+                <div><label class="form-label">Pinyin *</label><input id="f-pinyin" class="form-input" placeholder="nǐ hǎo"></div>
+            </div>
+            <div style="margin-bottom:14px"><label class="form-label">Nghĩa *</label><input id="f-meaning" class="form-input" placeholder="Xin chào"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+                <div><label class="form-label">Loại từ</label>
+                    <select id="f-type" class="form-input">
+                        <option>Danh từ</option><option>Động từ</option><option>Tính từ</option>
+                        <option>Trạng từ</option><option>Giới từ</option><option>Liên từ</option><option>Khác</option>
+                    </select>
+                </div>
+                <div><label class="form-label">Cấp độ</label>
+                    <select id="f-level" class="form-input">
+                        <option value="1">HSK 1</option><option value="2">HSK 2</option>
+                        <option value="3">HSK 3</option><option value="4">HSK 4</option>
+                        <option value="5">HSK 5</option><option value="6">HSK 6</option>
+                    </select>
+                </div>
+            </div>
+            <div style="margin-bottom:14px"><label class="form-label">Câu ví dụ</label><input id="f-example" class="form-input" placeholder="你好，我是小明。"></div>
+            <div style="margin-bottom:14px"><label class="form-label">Pinyin câu ví dụ</label><input id="f-ex-pinyin" class="form-input"></div>
+            <div style="margin-bottom:20px"><label class="form-label">Nghĩa câu ví dụ</label><input id="f-ex-meaning" class="form-input"></div>
+            <div style="display:flex;gap:10px;justify-content:flex-end">
+                <button onclick="closeModal()" class="btn btn-ghost">
+                    <i class="fa-solid fa-times"></i> Huỷ
+                </button>
+                <button onclick="saveWord()" class="btn btn-primary">
+                    <i class="fa-solid fa-save"></i> Lưu
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script>
+        const API_BASE = location.port==='3000'?'':`${location.protocol}//${location.hostname}:3000`;
+        const adminUser = (() => { try { return JSON.parse(localStorage.getItem('adminUser')); } catch { return null; } })();
+        if (!adminUser || adminUser.role !== 'admin') {
+            location.replace('login.html?reason=noperm');
+            throw new Error('Chua dang nhap admin - dang chuyen huong');
+        }
+        document.getElementById('sb-name').textContent = adminUser.name||adminUser.username;
+        document.getElementById('sb-ava').textContent  = (adminUser.name||adminUser.username||'A')[0].toUpperCase();
+        const hdrs = () => ({ 'Authorization': `Bearer ${adminUser.token}` });
+
+        function handleAuthFailure(status) {
+            localStorage.removeItem('adminUser');
+            location.replace(`login.html?reason=${status === 403 ? 'noperm' : 'expired'}`);
+        }
+
+        let _words = [], _selected = new Set();
+
+        async function loadVocab() {
+            const res = await fetch(`${API_BASE}/api/words/all`, { headers: hdrs() });
+            if (res.status === 401 || res.status === 403) return handleAuthFailure(res.status);
+            if (res.ok) _words = await res.json();
+            filterVocab();
+        }
+
+        function filterVocab() {
+            const q     = (document.getElementById('search-input')?.value||'').toLowerCase();
+            const level = parseInt(document.getElementById('level-filter')?.value||'0');
+            const list  = _words.filter(w =>
+                (!q || (w.hanzi||'').includes(q) || (w.pinyin||'').toLowerCase().includes(q) || (w.meaning||'').toLowerCase().includes(q)) &&
+                (!level || w.difficulty == level)
+            );
+            document.getElementById('vocab-count').textContent = `Hiển thị ${list.length} / ${_words.length} từ`;
+            document.getElementById('vocab-table').innerHTML = list.map(w => `
+                <tr>
+                    <td><input type="checkbox" class="row-chk" value="${w.id}" ${_selected.has(w.id)?'checked':''} onchange="toggleRow(${w.id},this.checked)"></td>
+                    <td style="font-family:serif;font-size:20px;font-weight:700;color:#818CF8">${esc(w.hanzi)}</td>
+                    <td style="color:var(--muted)">${esc(w.pinyin||'')}</td>
+                    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(w.meaning||'')}</td>
+                    <td><span class="badge badge-user" style="font-size:10px">${esc(w.category||w.word_type||'')}</span></td>
+                    <td><span class="badge badge-admin" style="font-size:10px">HSK ${w.difficulty}</span></td>
+                    <td>
+                        <div style="display:flex;gap:6px">
+                            <button class="btn btn-sm btn-ghost" onclick="openModal(${w.id})">
+                                <i class="fa-solid fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteWord(${w.id})">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>`).join('');
+        }
+
+        function toggleRow(id, checked) {
+            if (checked) _selected.add(id); else _selected.delete(id);
+            const btn = document.getElementById('bulk-del-btn');
+            const cnt = document.getElementById('sel-count');
+            btn.style.display = _selected.size > 0 ? 'inline-flex' : 'none';
+            cnt.textContent   = _selected.size > 0 ? `${_selected.size} đã chọn` : '';
+        }
+
+        function toggleAll(cb) {
+            document.querySelectorAll('.row-chk').forEach(c => {
+                c.checked = cb.checked;
+                toggleRow(parseInt(c.value), cb.checked);
+            });
+        }
+
+        async function bulkDelete() {
+            if (!_selected.size || !confirm(`Xóa ${_selected.size} từ đã chọn?`)) return;
+            const res = await fetch(`${API_BASE}/api/admin/vocab/bulk-delete`, {
+                method:'POST', headers:{...hdrs(),'Content-Type':'application/json'},
+                body: JSON.stringify({ ids: [..._selected] })
+            });
+            const d = await res.json();
+            showToast(`Đã xóa ${d.deleted} từ`);
+            _selected.clear();
+            await loadVocab();
+        }
+
+        function openModal(id=null) {
+            ['edit-id','f-hanzi','f-pinyin','f-meaning','f-example','f-ex-pinyin','f-ex-meaning']
+                .forEach(i => { const el=document.getElementById(i); if(el) el.value=''; });
+            document.getElementById('modal-title').textContent = id ? 'Chỉnh sửa từ vựng' : 'Thêm từ vựng mới';
+            if (id) {
+                const w = _words.find(x => x.id===id);
+                if (w) {
+                    document.getElementById('edit-id').value       = w.id;
+                    document.getElementById('f-hanzi').value       = w.hanzi||'';
+                    document.getElementById('f-pinyin').value      = w.pinyin||'';
+                    document.getElementById('f-meaning').value     = w.meaning||'';
+                    document.getElementById('f-type').value        = w.category||w.word_type||'Khác';
+                    document.getElementById('f-level').value       = w.difficulty||1;
+                    document.getElementById('f-example').value     = w.example||'';
+                    document.getElementById('f-ex-pinyin').value   = w.example_pinyin||'';
+                    document.getElementById('f-ex-meaning').value  = w.example_meaning||'';
+                }
+            }
+            document.getElementById('word-modal').style.display = 'flex';
+        }
+
+        function closeModal() { document.getElementById('word-modal').style.display='none'; }
+
+        async function saveWord() {
+            const id  = document.getElementById('edit-id').value;
+            const g   = i => document.getElementById(i)?.value||'';
+            const pay = { hanzi:g('f-hanzi'), pinyin:g('f-pinyin'), meaning:g('f-meaning'),
+                          category:g('f-type'), difficulty:parseInt(g('f-level')),
+                          example:g('f-example'), example_pinyin:g('f-ex-pinyin'), example_meaning:g('f-ex-meaning') };
+            if (!pay.hanzi||!pay.meaning) { showToast('Cần nhập Hán tự và Nghĩa','error'); return; }
+            const res = await fetch(`${API_BASE}${id?`/api/words/${id}`:'/api/words'}`, {
+                method: id?'PUT':'POST',
+                headers:{...hdrs(),'Content-Type':'application/json'},
+                body: JSON.stringify(pay)
+            });
+            if (res.ok) { showToast(id?'Đã cập nhật!':'Đã thêm từ mới!'); closeModal(); await loadVocab(); }
+            else { const d=await res.json(); showToast(d.message||'Lỗi lưu','error'); }
+        }
+
+        async function deleteWord(id) {
+            if (!confirm('Xóa từ vựng này?')) return;
+            const res = await fetch(`${API_BASE}/api/words/${id}`, { method:'DELETE', headers:hdrs() });
+            if (res.ok) { showToast('Đã xóa'); await loadVocab(); }
+            else showToast('Lỗi xóa','error');
+        }
+
+        function exportCSV() {
+            fetch(`${API_BASE}/api/admin/vocab/export`, { headers: hdrs() })
+                .then(r=>r.blob()).then(blob => {
+                    const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+                    a.download='hsk_vocabulary.csv'; a.click();
+                }).catch(()=>showToast('Lỗi xuất CSV','error'));
+        }
+
+        async function importCSV(e) {
+            const file = e.target.files[0]; if(!file) return;
+            const text = await file.text();
+            const lines = text.split('\n').filter(l=>l.trim());
+            const headers = lines[0].split(',').map(h=>h.replace(/"/g,'').trim());
+            const rows = lines.slice(1).map(line => {
+                const vals = line.match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g)||[];
+                const obj = {}; headers.forEach((h,i)=>{ obj[h]=(vals[i]||'').replace(/^"|"$/g,'').trim(); });
+                return obj;
+            }).filter(r=>r.hanzi);
+            if (!rows.length) { showToast('Không đọc được dữ liệu','error'); return; }
+            if (!confirm(`Import ${rows.length} từ?`)) return;
+            const res = await fetch(`${API_BASE}/api/admin/vocab/import`, {
+                method:'POST', headers:{...hdrs(),'Content-Type':'application/json'},
+                body: JSON.stringify({ rows })
+            });
+            const d = await res.json();
+            showToast(`<i class="fa-solid fa-check"></i> ${d.inserted} thêm mới, ${d.skipped} bỏ qua`);
+            e.target.value='';
+            await loadVocab();
+        }
+
+        function doLogout() { localStorage.removeItem('adminUser'); location.replace('login.html?reason=logout'); }
+        function esc(s) { const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+        function showToast(msg, type='success') {
+            const c=document.getElementById('toast-container');
+            const t=document.createElement('div'); t.className=`toast ${type}`;
+            t.innerHTML=(type==='success'?'<i class="fa-solid fa-check"></i> ':'<i class="fa-solid fa-times"></i> ')+msg; c.appendChild(t);
+            setTimeout(()=>t.remove(), 3500);
+        }
+        loadVocab();
+    </script>
+</body>
+</html>
