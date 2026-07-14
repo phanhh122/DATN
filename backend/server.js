@@ -637,7 +637,7 @@ async function callGemini(promptText) {
 // (gọi POST /api/srs/init nhiều từ cùng lúc) — không tự động lấy random từ DB nữa.
 app.get('/api/srs/due', auth, async(req, res) => {
     try {
-        const limit = Math.min(Number(req.query.limit) || 30, 100);
+        const limit = Math.min(Number(req.query.limit) || 30, 100) | 0;
 
         const due = await q(
             `SELECT v.*, wp.stability, wp.difficulty, wp.fsrs_state,
@@ -646,20 +646,16 @@ app.get('/api/srs/due', auth, async(req, res) => {
              JOIN vocabulary v ON v.id = wp.word_id
              WHERE wp.user_id = ? AND wp.next_review_date <= CURDATE()
              ORDER BY wp.fsrs_state ASC, wp.next_review_date ASC
-             LIMIT ?`, [req.user.id, limit]
+             LIMIT ${limit}`, [req.user.id]
         );
 
-        // FIX: trước đây endpoint này chỉ trả về thẻ đã có trong word_progress,
-        // nên phần "từ mới" trong phiên ôn tập không bao giờ có dữ liệu (luôn = 0).
-        // Bổ sung một đợt từ vựng người dùng CHƯA từng đưa vào hệ thống SRS,
-        // đánh dấu isNew để phía frontend hiển thị đúng nhãn/đếm số.
-        const newLimit = Math.max(0, Math.min(10, limit - due.length));
+        const newLimit = Math.max(0, Math.min(10, limit - due.length)) | 0;
         const fresh = newLimit > 0 ? await q(
             `SELECT v.* FROM vocabulary v
              LEFT JOIN word_progress wp ON wp.word_id = v.id AND wp.user_id = ?
              WHERE wp.id IS NULL
              ORDER BY v.hsk_level ASC, v.id ASC
-             LIMIT ?`, [req.user.id, newLimit]
+             LIMIT ${newLimit}`, [req.user.id]
         ) : [];
 
         const cards = [
