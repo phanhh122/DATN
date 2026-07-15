@@ -195,7 +195,7 @@ router.get('/analytics', requireAdmin, async (req, res) => {
             SELECT DATE_FORMAT(last_active_date, '%Y-%m-%d') AS day, COUNT(*) AS count
             FROM users
             WHERE last_active_date >= CURDATE() - INTERVAL 30 DAY
-            GROUP BY DATE(last_active_date)
+            GROUP BY DATE_FORMAT(last_active_date, '%Y-%m-%d') 
             ORDER BY day ASC`);
 
         // Top 10 user học nhiều nhất
@@ -235,7 +235,7 @@ router.get('/analytics', requireAdmin, async (req, res) => {
             SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS day, COUNT(*) AS count
             FROM users
             WHERE created_at >= NOW() - INTERVAL 30 DAY
-            GROUP BY DATE(created_at)
+            GROUP BY DATE_FORMAT(created_at, '%Y-%m-%d') 
             ORDER BY day ASC`);
 
         res.json({ dailyActive, topLearners, mostMissed, retention: retentionRow, cache: cacheRow, registrations });
