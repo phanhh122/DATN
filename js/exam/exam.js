@@ -1,17 +1,8 @@
-//  CẤU TRÚC ĐỀ THI THEO CẤP (phỏng theo tỉ lệ HSK thực tế):
-//  • vocab   — Hán tự → chọn nghĩa tiếng Việt    (理解词义)
-//  • reverse — Nghĩa tiếng Việt → chọn Hán tự    (辨认汉字)
-//  • pinyin  — Hán tự → chọn Pinyin               (辨认拼音)
-//  • grammar — Câu có chỗ trống → chọn từ điền   (语法填空)
-// ════════════════════════════════════════════════════════════════
 import { showToast } from '../components/toast.js';
 import { speakText } from '../components/tts.js';
 import { getToken } from '../auth/auth.js';
+import { saveQuizResult, getQuizHistory } from '../storage/storage.js';
 
-// ── Tỉ lệ loại câu hỏi theo cấp HSK ─────────────────────────
-//  HSK 1-2: chủ yếu nhận biết từ (vocab + pinyin)
-//  HSK 3-4: thêm đọc hiểu đảo chiều (reverse) + ngữ pháp
-//  HSK 5-6: tỉ lệ ngữ pháp + đảo chiều tăng mạnh
 const HSK_STRUCTURE = {
     1: { vocab: 0.55, pinyin: 0.35, reverse: 0.10, grammar: 0.00 },
     2: { vocab: 0.45, pinyin: 0.25, reverse: 0.30, grammar: 0.00 },
@@ -275,7 +266,7 @@ function renderExamQuestion() {
 
     document.getElementById('exam-prev-btn').disabled = _currentQ === 0;
     document.getElementById('exam-next-btn').textContent =
-        _currentQ === _questions.length - 1 ? '<i class="fa-solid fa-paper-plane"></i> Nộp bài' : '<i class="fa-solid fa-arrow-right"></i> Tiếp →';
+        _currentQ === _questions.length - 1 ? 'Nộp bài' : 'Tiếp →';
 }
 
 export function selectExamAnswer(idx) { _answers[_currentQ] = idx; renderExamQuestion(); }
@@ -298,7 +289,7 @@ function startTimer() {
     _timerID = setInterval(() => {
         _timeLeft--;
         updateTimerUI();
-        if (_timeLeft <= 0) { clearInterval(_timerID); showToast('<i class="fa-solid fa-clock"></i> Hết giờ!', 'info'); submitExam(); }
+        if (_timeLeft <= 0) { clearInterval(_timerID); showToast('Hết giờ!', 'info'); submitExam(); }
     }, 1000);
 }
 
@@ -337,8 +328,7 @@ function submitExam() {
                 : score >= 60 ? { zh:'及格', vi:'Đạt',       color:'#e67e22' }
                 :               { zh:'不及格',vi:'Chưa đạt',  color:'#e74c3c' };
 
-    _saveExamResult({ date: new Date().toISOString(), levels:[..._selectedLevels].sort().join('+'),
-        total, correct, score, grade: grade.zh, timeUsed });
+    saveQuizResult(correct, total, [..._selectedLevels].sort().join('+'), 'exam');
 
     showExamSection('exam-result');
     document.getElementById('exam-result-score').textContent  = score;

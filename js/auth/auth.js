@@ -118,6 +118,16 @@ function showError(msg) {
     el.style.display = 'block';
 }
 
+window.togglePasswordVisibility = function(btn) {
+    const input = btn.previousElementSibling;
+    if (!input) return;
+    const icon = btn.querySelector('i');
+    const show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    icon.classList.toggle('fa-eye', !show);
+    icon.classList.toggle('fa-eye-slash', show);
+};
+
 export function logout() {
     _currentUser = null;
     localStorage.removeItem('hsk_user');

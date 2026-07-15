@@ -1,5 +1,5 @@
 // dashboard/dashboard.js
-import { getStudied, getStreak, getStudyDays, getQuizHistory, loadStreakFromServer, localDateStr } from '../storage/storage.js';
+import { getStudied, getStreak, getStudyDays, getMergedQuizHistory, loadStreakFromServer, localDateStr } from '../storage/storage.js';
 import { getToken } from '../auth/auth.js';
 
 let _words = [];
@@ -51,7 +51,7 @@ async function loadWords() {
 
 function renderStats() {
     const studied   = getStudied();
-    const quizHist  = getQuizHistory();
+    const quizHist  = await getMergedQuizHistory();
     const streak    = getStreak();
     const accuracy  = quizHist.length
         ? Math.round(quizHist.reduce((a,b) => a + b.score/b.total, 0) / quizHist.length * 100)

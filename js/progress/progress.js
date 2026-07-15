@@ -1,5 +1,5 @@
 // progress/progress.js
-import { getStudied, getStreak, getStudyDays, getQuizHistory, loadStreakFromServer, getTotalStudySeconds, getMergedLearnedIds, localDateStr } from '../storage/storage.js';
+import { getStudied, getStreak, getStudyDays, getMergedQuizHistory, loadStreakFromServer, getTotalStudySeconds, getMergedLearnedIds, localDateStr } from '../storage/storage.js';
 import { getToken } from '../auth/auth.js';
 
 // Helper null-safe — không crash khi element chưa có trong HTML
@@ -23,7 +23,7 @@ export async function initProgress() {
     // theo từng cấp HSK ở trang Tiến độ có thể lệch với Tổng quan/Flashcard/Hồ
     // sơ (đã hợp nhất thêm dữ liệu server). Dùng chung nguồn getMergedLearnedIds().
     const studied = await getMergedLearnedIds();
-    const qhist   = getQuizHistory();
+    const qhist   = await getMergedQuizHistory();
     const days    = getStudyDays();
 
     const accuracy = qhist.length

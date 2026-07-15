@@ -154,6 +154,10 @@ export function setFlashcardMode() {
 
 export function setLevel(lvl) {
     _currentLevel = lvl;
+    document.querySelectorAll('#view-flashcard .tab-btn').forEach(b => {
+        const btnLvl = parseInt(b.getAttribute('onclick')?.match(/setLevel\((\d+)\)/)?.[1]);
+        b.classList.toggle('active', btnLvl === lvl);
+    });
     applyFilter();
 }
 

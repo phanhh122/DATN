@@ -240,7 +240,10 @@
                     </div>
                     <div class="form-group">
                         <label>Mật khẩu</label>
-                        <input type="password" id="login-pass" placeholder="Nhập mật khẩu" autocomplete="current-password">
+                           <div class="pw-field">
+                                <input type="password" id="login-pass" placeholder="Nhập mật khẩu" autocomplete="current-password">
+                                <button type="button" class="pw-toggle-btn" onclick="togglePasswordVisibility(this)"><i class="fa-solid fa-eye"></i></button>
+                            </div>
                     </div>
                     <button type="submit" class="btn btn-primary" style="margin-top:4px">Đăng nhập</button>
                     <p class="auth-switch-hint">Chưa có tài khoản? <a href="#" onclick="window.switchAuthTab('register');return false">Đăng ký ngay</a></p>
@@ -257,7 +260,10 @@
                     </div>
                     <div class="form-group">
                         <label>Mật khẩu</label>
-                        <input type="password" id="reg-pass" placeholder="Tối thiểu 6 ký tự">
+                        <div class="pw-field">
+                            <input type="password" id="reg-pass" placeholder="Tối thiểu 6 ký tự">
+                            <button type="button" class="pw-toggle-btn" onclick="togglePasswordVisibility(this)"><i class="fa-solid fa-eye"></i></button>
+                        </div>
                     </div>
                     <button type="submit" class="btn btn-primary">Tạo tài khoản</button>
                     <p class="auth-switch-hint">Đã có tài khoản? <a href="#" onclick="window.switchAuthTab('login');return false">Đăng nhập</a></p>
@@ -1094,16 +1100,25 @@
                             <div class="profile-section-title"> <i class="fa-solid fa-key"></i> Đổi mật khẩu</div>
                             <div class="form-group">
                                 <label>Mật khẩu hiện tại</label>
-                                <input type="password" id="pf-old-pass" placeholder="Nhập mật khẩu hiện tại">
+                                <div class="pw-field">
+                                    <input type="password" id="pf-old-pass" placeholder="Nhập mật khẩu hiện tại">
+                                    <button type="button" class="pw-toggle-btn" onclick="togglePasswordVisibility(this)"><i class="fa-solid fa-eye"></i></button>
+                                </div>
                             </div>
                             <div class="form-grid-2" style="margin-top:12px">
                                 <div class="form-group">
                                     <label>Mật khẩu mới</label>
-                                    <input type="password" id="pf-new-pass" placeholder="Tối thiểu 6 ký tự">
+                                    <div class="pw-field">
+                                        <input type="password" id="pf-new-pass" placeholder="Tối thiểu 6 ký tự">
+                                        <button type="button" class="pw-toggle-btn" onclick="togglePasswordVisibility(this)"><i class="fa-solid fa-eye"></i></button>
+                                    </div>
                                 </div>
                                 <div class="form-group">
                                     <label>Xác nhận mật khẩu</label>
-                                    <input type="password" id="pf-confirm-pass" placeholder="Nhập lại mật khẩu mới">
+                                    <div class="pw-field">
+                                        <input type="password" id="pf-confirm-pass" placeholder="Nhập lại mật khẩu mới">
+                                        <button type="button" class="pw-toggle-btn" onclick="togglePasswordVisibility(this)"><i class="fa-solid fa-eye"></i></button>
+                                    </div>
                                 </div>
                             </div>
                             <button class="btn btn-secondary" style="margin-top:12px" onclick="changePassword()">

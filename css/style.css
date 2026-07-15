@@ -1014,6 +1014,7 @@ body {
     color: var(--text);
     outline: none;
     flex: 1;
+    min-width: 0;
 }
 
 .filter-chips {
@@ -1381,6 +1382,7 @@ body {
     flex-direction: column;
     gap: 18px;
     scroll-behavior: smooth;
+    min-height:0;
 }
 
 .message {
@@ -2122,7 +2124,21 @@ body {
         min-width: 100px;
     }
     .chat-panel {
-        height: 520px;
+        height: calc(100dvh - 220px);
+        min-height: 420px;
+    }
+    .flashcard-front, .flashcard-back { padding: 24px; }
+    .fc-hanzi-sm { 
+        font-size: 40px;
+    }
+    .fc-pinyin { 
+        font-size: 18px; 
+    }
+    .fc-meaning  { 
+        font-size: 20px; 
+    }
+    .fc-example-zh { 
+        font-size: 15px; 
     }
 }
 
@@ -2146,6 +2162,14 @@ body {
         padding: 8px 14px;
         font-size: 13px;
     }
+    .flashcard-front, .flashcard-back { padding: 16px; }
+    .fc-hanzi-sm { font-size: 32px; margin-bottom: 4px; }
+    .fc-pinyin   { font-size: 15px; margin-bottom: 6px; }   
+    .fc-meaning  { font-size: 17px; margin-bottom: 10px; }
+    .fc-example-group { padding-top: 8px; }
+    .fc-example-zh, .fc-example-meaning { font-size: 12px; }
+    .fc-example-pinyin { font-size: 11px; }
+    .fc-speak-btn { margin-top: 8px; padding: 6px 14px; }
 }
 
 @media (min-width: 1600px) {
@@ -3476,3 +3500,13 @@ body {
     font-size: 11px;
     font-weight: 500;
 }
+
+.pw-field { position: relative; }
+.pw-field input { padding-right: 44px !important; }
+.pw-toggle-btn {
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer; padding: 4px;
+    color: var(--text3, #94a3b8); font-size: 16px; line-height: 1;
+}
+.pw-toggle-btn:hover { color: var(--primary); }
+

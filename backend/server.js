@@ -859,6 +859,26 @@ app.post('/api/quiz/attempt', auth, async(req, res) => {
     }
 });
 
+app.post('/api/quiz/session', auth, async (req, res) => {
+    try {
+        const { source, hsk_level, score, total } = req.body;
+        await pool.execute(
+            'INSERT INTO quiz_sessions (user_id, source, hsk_level, score, total) VALUES (?,?,?,?,?)',
+            [req.user.id, source === 'exam' ? 'exam' : 'quiz', hsk_level || null, score, total]
+        );
+        res.json({ ok: true });
+    } catch (e) { res.status(500).json({ error: 'server_error' }); }
+});
+
+app.get('/api/quiz/sessions', auth, async (req, res) => {
+    try {
+        const [rows] = await pool.execute(
+            'SELECT source, hsk_level, score, total, created_at FROM quiz_sessions WHERE user_id=? ORDER BY created_at DESC LIMIT 100',
+            [req.user.id]
+        );
+        res.json({ sessions: rows });
+    } catch (e) { res.status(500).json({ error: 'server_error' }); }
+});
 // ════════════════════════════════════════
 //  LEARNING ANALYTICS — điểm yếu theo loại từ (word_type) và theo cấp HSK
 // ════════════════════════════════════════

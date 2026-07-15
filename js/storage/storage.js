@@ -153,11 +153,35 @@ export function unmarkStudied(id) {
 }
 
 // Quiz history
-export function saveQuizResult(score, total, level) {
+export function saveQuizResult(score, total, level, source = 'quiz') {
     const hist = get('quiz_history', []);
     hist.push({ score, total, level, date: new Date().toISOString() });
     if (hist.length > 100) hist.shift();
     set('quiz_history', hist);
+
+    const token = _getToken();
+    if (token && window.API) {
+        fetch(`${window.API}/api/quiz/session`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ source, hsk_level: level, score, total })
+        }).catch(() => {});
+    }
+}
+
+export async function getMergedQuizHistory() {
+    const local = getQuizHistory();
+    try {
+        const token = _getToken();
+        if (!token || !window.API) return local;
+        const res = await fetch(`${window.API}/api/quiz/sessions`, { headers: { Authorization: `Bearer ${token}` } });
+        if (res.ok) {
+            const data = await res.json();
+            const serverHist = (data.sessions || []).map(s => ({ score: s.score, total: s.total, level: s.hsk_level, date: s.created_at }));
+            return [...local, ...serverHist];
+        }
+    } catch {}
+    return local;
 }
 export function getQuizHistory() { return get('quiz_history', []); }
 
