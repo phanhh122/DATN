@@ -212,6 +212,13 @@ body {
     width: 100%;
 }
 
+.form-group input[type="date"] {
+    height: 51px;
+    padding: 0 18px;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {

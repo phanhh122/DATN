@@ -155,7 +155,7 @@ export function unmarkStudied(id) {
 // Quiz history
 export function saveQuizResult(score, total, level, source = 'quiz') {
     const hist = get('quiz_history', []);
-    hist.push({ score, total, level, date: new Date().toISOString() });
+    hist.push({ score, total, level, source, date: new Date().toISOString() });  // ← thêm "source" vào đây
     if (hist.length > 100) hist.shift();
     set('quiz_history', hist);
 
@@ -169,20 +169,36 @@ export function saveQuizResult(score, total, level, source = 'quiz') {
     }
 }
 
+let _serverQuizHistCache = null;
+function _quizHistKey(r) {
+    const minute = new Date(r.date).toISOString().slice(0, 16);
+    return `${r.source || 'quiz'}|${r.level}|${r.score}|${r.total}|${minute}`;
+}
 export async function getMergedQuizHistory() {
     const local = getQuizHistory();
-    try {
-        const token = _getToken();
-        if (!token || !window.API) return local;
-        const res = await fetch(`${window.API}/api/quiz/sessions`, { headers: { Authorization: `Bearer ${token}` } });
-        if (res.ok) {
-            const data = await res.json();
-            const serverHist = (data.sessions || []).map(s => ({ score: s.score, total: s.total, level: s.hsk_level, date: s.created_at }));
-            return [...local, ...serverHist];
-        }
-    } catch {}
-    return local;
+    let server = _serverQuizHistCache;
+    if (!server) {
+        try {
+            const token = _getToken();
+            if (!token || !window.API) return local;
+            const res = await fetch(`${window.API}/api/quiz/sessions`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                server = (data.sessions || []).map(s => ({
+                    score: s.score, total: s.total, level: s.hsk_level, source: s.source, date: s.created_at
+                }));
+                _serverQuizHistCache = server;
+            }
+        } catch { return local; }
+    }
+    if (!server) return local;
+    const serverKeys = new Set(server.map(_quizHistKey));
+    const localOnly = local.filter(r => !serverKeys.has(_quizHistKey(r)));
+    return [...localOnly, ...server];
 }
+
 export function getQuizHistory() { return get('quiz_history', []); }
 
 // Study sessions — track date strings

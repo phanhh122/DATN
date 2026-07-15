@@ -330,7 +330,7 @@ function submitExam() {
 
     saveQuizResult(correct, total, [..._selectedLevels].sort().join('+'), 'exam');
     renderExamHistory();
-    showToast('<i class="fa-solid fa-floppy-disk"></i> Đã lưu vào lịch sử thi', 'info');
+    showToast('Đã lưu vào lịch sử thi', 'success');
     showExamSection('exam-result');
     document.getElementById('exam-result-score').textContent  = score;
     document.getElementById('exam-result-grade').textContent  = `${grade.zh} — ${grade.vi}`;
