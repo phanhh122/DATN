@@ -1183,6 +1183,20 @@
             }
         });
     </script>
+
+    <script>
+    window.togglePasswordVisibility = function(btn) {
+        const input = btn.previousElementSibling;
+        if (!input) return;
+        const icon = btn.querySelector('i');
+        const show = input.type === 'password';
+        input.type = show ? 'text' : 'password';
+        if (icon) {
+            icon.classList.toggle('fa-eye', !show);
+            icon.classList.toggle('fa-eye-slash', show);
+        }
+    };
+    </script>
     <script defer type="module" src="./js/main.js?v=20260711b"></script>
 </body>
 

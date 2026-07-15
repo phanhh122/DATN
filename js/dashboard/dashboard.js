@@ -10,7 +10,7 @@ export async function initDashboard() {
     await loadWords();
     await loadStreakFromServer();
     await loadSRSLearnedIds();
-    renderStats();
+    await renderStats();
     renderTodayWords();
     renderWeekProgress();
     // Tải song song dữ liệu SRS + gợi ý AI (không chặn render chính)
@@ -49,7 +49,7 @@ async function loadWords() {
     window._allWords = _words; // share across modules
 }
 
-function renderStats() {
+async function renderStats() {
     const studied   = getStudied();
     const quizHist  = await getMergedQuizHistory();
     const streak    = getStreak();
