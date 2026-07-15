@@ -108,7 +108,7 @@ function renderCard() {
             html = `<div style="font-size:40px;margin-bottom:12px"><i class="fa-solid fa-check-circle"></i></div>
                 <p style="font-size:16px;font-weight:600;margin-bottom:6px">Hết thẻ ${lvlLabel}!</p>
                 <p style="font-size:14px;color:var(--muted);margin-bottom:16px">Tất cả từ ở cấp này đã được ẩn.</p>
-                <button class="btn btn-primary" onclick="toggleHideStudied()"><i class="fa-solid fa-eye"></i> Hiện tất cả từ</button>`;
+                <button class="btn btn-primary" onclick="toggleHideStudied()">Hiện tất cả từ</button>`;
         } else {
             html = `<div style="font-size:40px;margin-bottom:12px"><i class="fa-solid fa-inbox"></i></div>
                 <p style="font-size:14px;color:var(--muted)">Không có từ nào ở cấp này.</p>`;

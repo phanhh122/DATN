@@ -329,7 +329,8 @@ function submitExam() {
                 :               { zh:'不及格',vi:'Chưa đạt',  color:'#e74c3c' };
 
     saveQuizResult(correct, total, [..._selectedLevels].sort().join('+'), 'exam');
-
+    renderExamHistory();
+    showToast('<i class="fa-solid fa-floppy-disk"></i> Đã lưu vào lịch sử thi', 'info');
     showExamSection('exam-result');
     document.getElementById('exam-result-score').textContent  = score;
     document.getElementById('exam-result-grade').textContent  = `${grade.zh} — ${grade.vi}`;
@@ -400,30 +401,22 @@ function _getCorrectText(q) {
     return q.correct.hanzi;
 }
 
-function _saveExamResult(r) {
-    try {
-        const hist = JSON.parse(localStorage.getItem('hsk_exam_history') || '[]');
-        hist.unshift(r); if (hist.length > 20) hist.length = 20;
-        localStorage.setItem('hsk_exam_history', JSON.stringify(hist));
-    } catch {}
-}
-
 function renderExamHistory() {
     const el = document.getElementById('exam-history');
     if (!el) return;
-    try {
-        const hist = JSON.parse(localStorage.getItem('hsk_exam_history') || '[]');
-        if (!hist.length) { el.innerHTML = '<p style="color:var(--muted);font-size:13px">Chưa có lịch sử thi.</p>'; return; }
-        el.innerHTML = hist.slice(0,5).map(r => {
-            const d = new Date(r.date).toLocaleDateString('vi-VN');
-            const gc = r.grade==='优秀'?'#27ae60':r.grade==='良好'?'#3498db':r.grade==='及格'?'#e67e22':'#e74c3c';
-            return `<div class="exam-history-item">
-                <span>${d}</span><span>HSK ${r.levels||'?'}</span>
-                <span style="font-weight:700">${r.score}/100</span>
-                <span style="color:${gc};font-weight:600">${r.grade}</span>
-            </div>`;
-        }).join('');
-    } catch {}
+    const hist = getQuizHistory().filter(r => r.source === 'exam').slice().reverse();
+    if (!hist.length) { el.innerHTML = '<p style="color:var(--muted);font-size:13px">Chưa có lịch sử thi.</p>'; return; }
+    el.innerHTML = hist.slice(0, 5).map(r => {
+        const d = new Date(r.date).toLocaleDateString('vi-VN');
+        const pct = Math.round((r.score / r.total) * 100);
+        const grade = pct >= 90 ? '优秀' : pct >= 75 ? '良好' : pct >= 60 ? '及格' : '不及格';
+        const gc = grade==='优秀'?'#27ae60':grade==='良好'?'#3498db':grade==='及格'?'#e67e22':'#e74c3c';
+        return `<div class="exam-history-item">
+            <span>${d}</span><span>HSK ${r.level||'?'}</span>
+            <span style="font-weight:700">${pct}/100</span>
+            <span style="color:${gc};font-weight:600">${grade}</span>
+        </div>`;
+    }).join('');
 }
 
 export function retryExam()      { startExam(); }
