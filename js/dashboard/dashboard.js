@@ -114,7 +114,7 @@ async function loadRecommendation() {
         if (weakEl && data.weakTopics && data.weakTopics.length) {
             weakEl.innerHTML = data.weakTopics.map(t =>
                 `<span style="background:var(--danger-light,#fde8e8);color:var(--danger,#e74c3c);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:500">
-                    <i class="fa-solid fa-exclamation-triangle"></i> ${t.word_type || 'Không rõ'}: ${t.accuracy}% chính xác
+                    ${t.word_type || 'Không rõ'}: ${t.accuracy}% chính xác
                 </span>`
             ).join('');
         }
