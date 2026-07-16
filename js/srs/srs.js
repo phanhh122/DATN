@@ -11,18 +11,10 @@ let _sessionLog  = [];
 let _stats       = { again:0, hard:0, good:0, easy:0 };
 let _initialized = false;
 let _token       = null;
-let _shownTransition = false; // đã hiện toast chuyển giao due→new chưa
-
-// FIX: rateSRSCard() gửi POST /api/srs/review kiểu "fire-and-forget" (không await),
-// nên khi người dùng ôn xong thẻ cuối và bấm "Về tổng quan" ngay lập tức,
-// request lưu kết quả thẻ cuối (transaction ghi DB, thường chậm) có thể CHƯA
-// hoàn tất trong khi GET /api/srs/stats ở Dashboard đã chạy xong (chỉ là SELECT
-// đơn giản, nhanh hơn) → Dashboard đọc due_today CŨ, vẫn hiển thị 3 thẻ cần ôn
-// dù đã ôn hết. Theo dõi các promise đang chờ để nơi khác (navigate) có thể
-// đợi chúng hoàn tất trước khi tải lại số liệu.
+let _shownTransition = false; 
 let _pendingReviews = [];
 
-/** Đợi tất cả request /api/srs/review đang chạy hoàn tất (dùng trước khi rời trang SRS). */
+
 export function waitForPendingSRSReviews() {
     return Promise.allSettled(_pendingReviews);
 }
@@ -83,7 +75,7 @@ function renderSRSCard() {
     if (!_shownTransition && _dueCount > 0 && _idx === _dueCount) {
         _shownTransition = true;
         const newCount = _cards.length - _dueCount;
-        showToast(`<i class="fa-solid fa-check-circle"></i> Ôn xong ${_dueCount} thẻ đến hạn! Tiếp theo: ${newCount} từ mới.`, 'success');
+        showToast(`Ôn xong ${_dueCount} thẻ đến hạn! Tiếp theo: ${newCount} từ mới.`, 'success');
     }
 
     const w = _cards[_idx];
@@ -214,23 +206,8 @@ export async function rateSRSCard(rating) {
     const labels = { 1:'again', 2:'hard', 3:'good', 4:'easy' };
     _stats[labels[rating]]++;
     _sessionLog.push({ word_id: w.id, rating });
-
-    // FIX: đánh dấu đã học cục bộ mỗi khi đánh giá một thẻ (due hoặc mới),
-    // để Dashboard/Flashcard biết từ này đã được xử lý dù học qua SRS chứ
-    // không chỉ qua nút "✓ Đã nhớ" của Flashcard.
     markStudied(String(w.id));
 
-    // FIX: theo dõi promise của request này trong _pendingReviews để
-    // waitForPendingSRSReviews() (gọi từ navigate() khi rời trang SRS) có thể
-    // đợi nó ghi xong DB trước khi Dashboard tải lại due_today — tránh tình
-    // trạng hiển thị số thẻ cần ôn cũ dù đã ôn xong.
-    //
-    // FIX: trước đây fetch() dùng .catch(() => {}) nuốt mọi lỗi và KHÔNG kiểm
-    // tra res.ok — nếu server trả lỗi 4xx/5xx (ví dụ do lệch schema DB), fetch
-    // KHÔNG throw (chỉ throw khi lỗi mạng), nên request coi như "thành công"
-    // một cách âm thầm dù dữ liệu chưa hề được lưu vào word_progress. Người
-    // dùng thấy card tiếp theo bình thường, nhưng due_today ở server không hề
-    // giảm. Giờ kiểm tra res.ok và báo lỗi rõ ràng cho người dùng nếu lưu thất bại.
     const reviewReq = fetch(`${window.API}/api/srs/review`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${_token}` },
@@ -239,12 +216,12 @@ export async function rateSRSCard(rating) {
         if (!res.ok) {
             const msg = await res.json().catch(() => ({}));
             console.error('[SRS review] Lưu thất bại:', res.status, msg);
-            showToast(`⚠️ Không lưu được kết quả ôn tập (lỗi ${res.status}). Số thẻ cần ôn có thể không cập nhật đúng.`, 'error');
+            showToast(`Không lưu được kết quả ôn tập (lỗi ${res.status}). Số thẻ cần ôn có thể không cập nhật đúng.`, 'error');
         }
         return res;
     }).catch(err => {
         console.error('[SRS review] Lỗi mạng:', err);
-        showToast('⚠️ Mất kết nối khi lưu kết quả ôn tập — thử lại khi có mạng.', 'error');
+        showToast('Mất kết nối khi lưu kết quả ôn tập — thử lại khi có mạng.', 'error');
     });
     _pendingReviews.push(reviewReq);
 
@@ -261,7 +238,7 @@ export async function rateSRSCard(rating) {
     renderSRSCard();
 }
 
-// ── Result ─────────────────────────────────────────────────────
+// ── Result 
 function showSRSResult() {
     _showSection('srs-result');
     const total   = _sessionLog.length;
@@ -303,9 +280,6 @@ function _showSection(id) {
     });
 }
 
-// FIX: "Ôn tiếp" gọi lại initSRS() để tải danh sách thẻ đến hạn mới — nếu chưa
-// đợi các request review của phiên trước ghi xong DB, danh sách tải về có thể
-// vẫn còn lẫn các thẻ vừa ôn xong. Đợi chúng hoàn tất trước khi tải lại.
 export async function restartSRS() {
     await waitForPendingSRSReviews();
     return initSRS();

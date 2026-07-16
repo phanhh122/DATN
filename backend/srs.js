@@ -132,15 +132,7 @@ function computeNextState(prev, rating) {
     next.setHours(0, 0, 0, 0);
     next.setDate(next.getDate() + interval);
 
-    // FIX BUG QUAN TRỌNG NHẤT: .toISOString() luôn trả về giờ UTC. Với múi
-    // giờ Việt Nam (UTC+7), 00:00:00 giờ VN = 17:00:00 UTC NGÀY HÔM TRƯỚC, nên
-    // .toISOString().split('T')[0] bị lùi lại 1 ngày — next_review_date được
-    // tính đúng là "ngày mai" ở object Date nhưng khi serialize lại thành
-    // "hôm nay". Hậu quả: MỌI thẻ vừa ôn xong vẫn bị tính là "đến hạn hôm nay"
-    // trong DB, dù interval_days > 0 — thẻ không bao giờ biến mất khỏi danh
-    // sách cần ôn dù ôn bao nhiêu lần. Đây chính là nguyên nhân toàn bộ bug
-    // "ôn xong vẫn hiện lại" trong suốt quá trình debug. Format bằng các
-    // thành phần ngày giờ ĐỊA PHƯƠNG (getFullYear/getMonth/getDate) thay vì
+    //  Format bằng các thành phần ngày giờ ĐỊA PHƯƠNG (getFullYear/getMonth/getDate) thay vì
     // chuyển qua UTC để tránh lệch ngày.
     const y   = next.getFullYear();
     const m   = String(next.getMonth() + 1).padStart(2, '0');

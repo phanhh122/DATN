@@ -4,11 +4,11 @@ import { speakText } from '../components/tts.js';
 import { showToast } from '../components/toast.js';
 import { getToken } from '../auth/auth.js';
 
-let _words    = [];
+let _words = [];
 let _filtered = [];
-let _idx      = 0;
-let _flipped  = false;
-let _hideStudied  = true;
+let _idx = 0;
+let _flipped = false;
+let _hideStudied = true;
 let _currentLevel = 0;
 
 // ── Init ─────────────────────────────────────────────────────
@@ -70,24 +70,24 @@ function applyFilter() {
 }
 
 function renderCard() {
-    const cardWrap  = document.getElementById('fc-card-wrap');
+    const cardWrap = document.getElementById('fc-card-wrap');
     const fcActions = document.getElementById('fc-actions');
-    const counter   = document.getElementById('fc-counter');
-    const progBar   = document.getElementById('fc-progress-bar');
-    const hint      = document.getElementById('fc-empty-hint');
-    const card      = document.getElementById('flashcard');
+    const counter = document.getElementById('fc-counter');
+    const progBar = document.getElementById('fc-progress-bar');
+    const hint = document.getElementById('fc-empty-hint');
+    const card = document.getElementById('flashcard');
 
     if (!_filtered.length) {
         // Ẩn card, hiện message
-        if (cardWrap)  cardWrap.style.display  = 'none';
+        if (cardWrap) cardWrap.style.display = 'none';
         if (fcActions) fcActions.style.display = 'none';
-        if (counter)   counter.style.display   = 'none';
-        if (progBar)   progBar.style.display   = 'none';
+        if (counter) counter.style.display = 'none';
+        if (progBar) progBar.style.display = 'none';
 
-        const studied    = getStudied();
+        const studied = getStudied();
         const levelWords = _currentLevel ? _words.filter(w => w.difficulty == _currentLevel) : _words;
         const allStudied = levelWords.length > 0 && levelWords.every(w => studied.has(String(w.id)));
-        const lvlLabel   = _currentLevel ? `HSK ${_currentLevel}` : 'tất cả cấp';
+        const lvlLabel = _currentLevel ? `HSK ${_currentLevel}` : 'tất cả cấp';
 
         let html = '';
         if (!_words.length) {
@@ -118,23 +118,23 @@ function renderCard() {
     }
 
     // Có thẻ — hiện card
-    if (cardWrap)  cardWrap.style.display  = '';
+    if (cardWrap) cardWrap.style.display = '';
     if (fcActions) fcActions.style.display = '';
-    if (counter)   counter.style.display   = '';
-    if (progBar)   progBar.style.display   = '';
+    if (counter) counter.style.display = '';
+    if (progBar) progBar.style.display = '';
     if (hint) { hint.style.display = 'none'; hint.innerHTML = ''; }
 
     const w = _filtered[_idx];
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val ?? ''; };
-    set('fc-hanzi',          w.hanzi);
-    set('fc-back-hanzi',     w.hanzi);
-    set('fc-pinyin',         w.pinyin   || '');
-    set('fc-meaning',        w.meaning  || '');
-    set('fc-example-zh',     w.example  || '');
-    set('fc-example-pinyin', w.example_pinyin  || '');
-    set('fc-example-meaning',w.example_meaning || '');
-    set('fc-current',        _idx + 1);
-    set('fc-total',          _filtered.length);
+    set('fc-hanzi', w.hanzi);
+    set('fc-back-hanzi', w.hanzi);
+    set('fc-pinyin', w.pinyin || '');
+    set('fc-meaning', w.meaning || '');
+    set('fc-example-zh', w.example || '');
+    set('fc-example-pinyin', w.example_pinyin || '');
+    set('fc-example-meaning', w.example_meaning || '');
+    set('fc-current', _idx + 1);
+    set('fc-total', _filtered.length);
 
     const bar = document.getElementById('fc-progress');
     if (bar) bar.style.width = (_idx / Math.max(_filtered.length - 1, 1) * 100).toFixed(1) + '%';
@@ -148,7 +148,7 @@ function renderCard() {
 // ── Tab / Level controls ──────────────────────────────────────
 export function setFlashcardMode() {
     _currentLevel = 0;
-    document.querySelectorAll('#view-flashcard .tab-btn').forEach((b,i) => b.classList.toggle('active', i===0));
+    document.querySelectorAll('#view-flashcard .tab-btn').forEach((b, i) => b.classList.toggle('active', i === 0));
     applyFilter();
 }
 
@@ -161,20 +161,20 @@ export function setLevel(lvl) {
     applyFilter();
 }
 
-window._jumpToFlashcard = function(wordId) {
+window._jumpToFlashcard = function (wordId) {
     _currentLevel = 0; _hideStudied = false;
     _filtered = [..._words];
     const i = _filtered.findIndex(w => String(w.id) === String(wordId));
-    if (i > 0) { const [t] = _filtered.splice(i,1); _filtered.unshift(t); }
+    if (i > 0) { const [t] = _filtered.splice(i, 1); _filtered.unshift(t); }
     _idx = 0;
-    document.querySelectorAll('#view-flashcard .tab-btn').forEach((b,i) => b.classList.toggle('active', i===0));
+    document.querySelectorAll('#view-flashcard .tab-btn').forEach((b, i) => b.classList.toggle('active', i === 0));
     renderModeBar();
     renderCard();
 };
 
-window.setFlashcardModeAll = function() {
+window.setFlashcardModeAll = function () {
     _currentLevel = 0;
-    document.querySelectorAll('#view-flashcard .tab-btn').forEach((b,i) => b.classList.toggle('active', i===0));
+    document.querySelectorAll('#view-flashcard .tab-btn').forEach((b, i) => b.classList.toggle('active', i === 0));
     applyFilter();
 };
 
@@ -213,10 +213,10 @@ export function markCard(known) {
 function _showMemoryPicker(w) {
     document.getElementById('fc-memory-picker')?.remove();
     const levels = [
-        { rating:1, label:'Mới học',  sub:'Ôn lại ngày mai',   color:'#e74c3c', days:'ngày mai', icon:'🔴' },
-        { rating:2, label:'Khá nhớ',  sub:'Ôn lại sau 1 ngày', color:'#e67e22', days:'1 ngày',   icon:'🟠' },
-        { rating:3, label:'Nhớ tốt',  sub:'Ôn lại sau 3 ngày', color:'#3498db', days:'3 ngày',   icon:'🔵' },
-        { rating:4, label:'Nhớ chắc', sub:'Ôn lại sau 15 ngày',color:'#27ae60', days:'15 ngày',  icon:'🟢' },
+        { rating: 1, label: 'Mới học', sub: 'Ôn lại ngày mai', color: '#e74c3c', days: 'ngày mai' },
+        { rating: 2, label: 'Khá nhớ', sub: 'Ôn lại sau 1 ngày', color: '#e67e22', days: '1 ngày' },
+        { rating: 3, label: 'Nhớ tốt', sub: 'Ôn lại sau 3 ngày', color: '#3498db', days: '3 ngày' },
+        { rating: 4, label: 'Nhớ chắc', sub: 'Ôn lại sau 15 ngày', color: '#27ae60', days: '15 ngày' },
     ];
     const overlay = document.createElement('div');
     overlay.id = 'fc-memory-picker';
@@ -232,11 +232,26 @@ function _showMemoryPicker(w) {
             <div style="display:flex;flex-direction:column;gap:10px">
                 ${levels.map(l => `
                     <button onclick="window._confirmMemoryLevel(${l.rating})"
-                        style="display:flex;align-items:center;gap:14px;padding:14px 16px;border:2px solid ${l.color}22;
-                            border-radius:12px;background:${l.color}0d;cursor:pointer;font-family:inherit;text-align:left;width:100%"
-                        onmouseover="this.style.background='${l.color}20';this.style.borderColor='${l.color}'"
-                        onmouseout="this.style.background='${l.color}0d';this.style.borderColor='${l.color}22'">
-                        <span style="font-size:22px">${l.icon}</span>
+                        style="display:flex;align-items:center;padding:14px 16px;
+                            border:none;
+                            border-radius:14px;
+                            background:${l.color}0d;
+                            box-shadow:0 4px 14px rgba(0,0,0,.08);
+                            cursor:pointer;
+                            font-family:inherit;
+                            text-align:left;
+                            width:100%;
+                            transition:all .2s ease"
+                        onmouseover="
+                            this.style.background='${l.color}18';
+                            this.style.boxShadow='0 8px 22px rgba(0,0,0,.14)';
+                            this.style.transform='translateY(-2px)';
+                        "
+                        onmouseout="
+                            this.style.background='${l.color}0d';
+                            this.style.boxShadow='0 4px 14px rgba(0,0,0,.08)';
+                            this.style.transform='translateY(0)';
+                    ">
                         <div style="flex:1">
                             <div style="font-weight:700;color:${l.color};font-size:15px">${l.label}</div>
                             <div style="font-size:12px;color:var(--muted)">${l.sub}</div>
@@ -251,20 +266,20 @@ function _showMemoryPicker(w) {
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
 }
 
-window._confirmMemoryLevel = function(rating) {
+window._confirmMemoryLevel = function (rating) {
     document.getElementById('fc-memory-picker')?.remove();
     if (!_filtered.length) return;
     const w = _filtered[_idx];
     markStudied(String(w.id));
-    const msgs = { 1:`🔴 "${w.hanzi}" — ôn ngày mai`, 2:`🟠 "${w.hanzi}" — ôn sau 1 ngày`, 3:`🔵 "${w.hanzi}" — ôn sau 3 ngày`, 4:`🟢 "${w.hanzi}" — ôn sau 15 ngày` };
+    const msgs = { 1: `🔴 "${w.hanzi}" — ôn ngày mai`, 2: `🟠 "${w.hanzi}" — ôn sau 1 ngày`, 3: `🔵 "${w.hanzi}" — ôn sau 3 ngày`, 4: `🟢 "${w.hanzi}" — ôn sau 15 ngày` };
     showToast(msgs[rating] + ' (FSRS)', 'success');
     const token = getToken();
     if (token) fetch(`${window.API}/api/srs/init`, {
-        method:'POST', headers:{'Content-Type':'application/json', Authorization:`Bearer ${token}`},
-        body: JSON.stringify({ word_ids:[w.id], initial_rating:rating })
-    }).catch(()=>{});
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ word_ids: [w.id], initial_rating: rating })
+    }).catch(() => { });
     renderModeBar();
-    if (_hideStudied) { _filtered.splice(_idx,1); if (_idx >= _filtered.length) _idx = Math.max(0,_filtered.length-1); renderCard(); return; }
+    if (_hideStudied) { _filtered.splice(_idx, 1); if (_idx >= _filtered.length) _idx = Math.max(0, _filtered.length - 1); renderCard(); return; }
     nextCard();
 };
 
@@ -274,7 +289,7 @@ export function initStudied() {
     if (!el) return;
     if (!_words.length && window._allWords?.length) _words = window._allWords;
 
-    const studied  = getStudied();
+    const studied = getStudied();
     const doneList = _words.filter(w => studied.has(String(w.id)));
 
     if (!doneList.length) {
@@ -288,10 +303,10 @@ export function initStudied() {
     }
 
     const byLevel = {};
-    doneList.forEach(w => { const l = w.difficulty||1; if(!byLevel[l]) byLevel[l]=[]; byLevel[l].push(w); });
+    doneList.forEach(w => { const l = w.difficulty || 1; if (!byLevel[l]) byLevel[l] = []; byLevel[l].push(w); });
 
     let html = `<p style="color:var(--muted);font-size:13px;margin-bottom:20px">${doneList.length} từ đã nhớ</p>`;
-    Object.entries(byLevel).sort(([a],[b])=>a-b).forEach(([lvl, words]) => {
+    Object.entries(byLevel).sort(([a], [b]) => a - b).forEach(([lvl, words]) => {
         html += `<div style="margin-bottom:24px">
             <div style="font-size:12px;font-weight:700;color:var(--primary);letter-spacing:1px;
                 text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--primary)">
@@ -304,8 +319,8 @@ export function initStudied() {
                             <span style="font-size:24px;font-weight:700;color:var(--primary)">${w.hanzi}</span>
                             <button class="unmark-btn" onclick="event.stopPropagation();window._unmarkWord(${w.id},this)" title="Bỏ đánh dấu">✕</button>
                         </div>
-                        <div style="font-size:13px;color:var(--text2);margin-top:4px">${w.pinyin||''}</div>
-                        <div style="font-size:14px;color:var(--text);margin-top:2px">${w.meaning||''}</div>
+                        <div style="font-size:13px;color:var(--text2);margin-top:4px">${w.pinyin || ''}</div>
+                        <div style="font-size:14px;color:var(--text);margin-top:2px">${w.meaning || ''}</div>
                     </div>`).join('')}
             </div>
         </div>`;
@@ -313,14 +328,14 @@ export function initStudied() {
     el.innerHTML = html;
 }
 
-window._unmarkWord = function(wordId) {
+window._unmarkWord = function (wordId) {
     unmarkStudied(String(wordId));
     const w = _words.find(w => w.id === wordId);
     if (w) showToast(`↩ Đã bỏ đánh dấu "${w.hanzi}"`, 'info');
     initStudied(); // re-render studied view
 };
 
-window._reviewWord = function(wordId) {
+window._reviewWord = function (wordId) {
     navigate('flashcard');
     setTimeout(() => { if (window._jumpToFlashcard) window._jumpToFlashcard(wordId); }, 300);
 };

@@ -212,7 +212,7 @@ router.get('/analytics', requireAdmin, async (req, res) => {
                    ROUND(SUM(CASE WHEN qa.is_correct=0 THEN 1 ELSE 0 END)/COUNT(*)*100) AS error_rate
             FROM quiz_attempts qa
             JOIN vocabulary v ON v.id = qa.word_id
-            GROUP BY qa.word_id
+            GROUP BY v.id, v.word, v.pinyin, v.meaning, v.hsk_level
             HAVING attempts >= 5
             ORDER BY error_rate DESC, attempts DESC
             LIMIT 10`);
