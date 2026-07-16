@@ -271,8 +271,8 @@ window._confirmMemoryLevel = function (rating) {
     if (!_filtered.length) return;
     const w = _filtered[_idx];
     markStudied(String(w.id));
-    const msgs = { 1: `🔴 "${w.hanzi}" — ôn ngày mai`, 2: `🟠 "${w.hanzi}" — ôn sau 1 ngày`, 3: `🔵 "${w.hanzi}" — ôn sau 3 ngày`, 4: `🟢 "${w.hanzi}" — ôn sau 15 ngày` };
-    showToast(msgs[rating] + ' (FSRS)', 'success');
+    const msgs = { 1: `"${w.hanzi}" — ôn ngày mai`, 2: `"${w.hanzi}" — ôn sau 1 ngày`, 3: `"${w.hanzi}" — ôn sau 3 ngày`, 4: `"${w.hanzi}" — ôn sau 15 ngày` };
+    showToast(msgs[rating], 'success');
     const token = getToken();
     if (token) fetch(`${window.API}/api/srs/init`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
