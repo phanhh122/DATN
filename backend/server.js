@@ -10,12 +10,20 @@ const { computeNextState } = require('./srs');
 const aiCache = require('./ai-cache');
 const fs = require("fs");
 const dotenv = require("dotenv");
+const crypto = require('crypto');
+const { sendResetPasswordEmail } = require('./mailer');
+const { OAuth2Client } = require('google-auth-library');
 const envPath = path.resolve(__dirname, "..", ".env");
 dotenv.config({ path: envPath });
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const SECRET = process.env.JWT_SECRET || 'hsk_secret_2024';
+// FIX: base URL dùng để dựng link đặt lại mật khẩu trong email — đặt
+// APP_URL=https://ten-app.onrender.com trong .env khi deploy, để trống thì
+// mặc định trỏ về localhost cho môi trường dev.
+const APP_URL = process.env.APP_URL || `http://localhost:${process.env.PORT || 3000}`;
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
@@ -135,6 +143,22 @@ async function ensureSchema() {
             KEY idx_kind (kind)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
 
+        // FIX (quên mật khẩu): bảng lưu token đặt lại mật khẩu. Token thật
+        // gửi qua email KHÔNG được lưu trực tiếp trong DB — chỉ lưu bản
+        // băm SHA-256 của nó (giống cách lưu password), để nếu DB bị lộ thì
+        // kẻ tấn công vẫn không có token hợp lệ để dùng.
+        await pool.execute(`CREATE TABLE IF NOT EXISTS password_resets (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            token_hash CHAR(64) NOT NULL,
+            expires_at DATETIME NOT NULL,
+            used TINYINT(1) NOT NULL DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            KEY idx_user (user_id),
+            KEY idx_token (token_hash),
+            CONSTRAINT fk_pr_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+
         // Cột FSRS trên word_progress — thêm nếu chưa có (MySQL < 8 không hỗ trợ
         // "ADD COLUMN IF NOT EXISTS" nên phải try/catch từng cột).
         const fsrsCols = [
@@ -145,10 +169,42 @@ async function ensureSchema() {
             // Đánh dấu thời điểm admin reset tiến độ — client dùng để biết cần xoá
             // cache localStorage cũ thay vì tự đồng bộ ngược đè lên bản đã reset.
             `ALTER TABLE users ADD COLUMN progress_reset_at DATETIME NULL`,
+            // FIX (đăng nhập Google): lưu Google "sub" (id định danh duy nhất,
+            // không đổi kể cả khi user đổi email) để nhận diện tài khoản Google
+            // ở những lần đăng nhập sau, nhanh và ổn định hơn so với so email.
+            `ALTER TABLE users ADD COLUMN google_id VARCHAR(64) NULL`,
         ];
         for (const sql of fsrsCols) {
             try { await pool.execute(sql); } catch (e) {
                 if (!e.message.includes('Duplicate column')) console.warn('[schema] bỏ qua:', e.message);
+            }
+        }
+
+        // FIX (đăng nhập Google): tài khoản tạo qua Google không có mật khẩu nội
+        // bộ. Nếu cột `password` đang là NOT NULL (thường do tạo tay qua
+        // phpMyAdmin lúc đầu dự án), phải nới thành NULL — nếu không mọi lần
+        // tạo user Google mới sẽ lỗi "Column 'password' cannot be null".
+        try {
+            await pool.execute(`ALTER TABLE users MODIFY password VARCHAR(255) NULL`);
+        } catch (e) { console.warn('[schema] bỏ qua (MODIFY password nullable):', e.message); }
+
+        // FIX (đăng nhập Google + quên mật khẩu): đảm bảo mỗi email chỉ gắn
+        // với đúng 1 tài khoản — nếu không, /api/auth/google và
+        // /api/forgot-password có thể chọn nhầm user khi có 2 tài khoản
+        // trùng email (trước đây `email` chỉ được kiểm tra trùng ở tầng ứng
+        // dụng, không có ràng buộc UNIQUE thật ở DB).
+        try {
+            await pool.execute(`ALTER TABLE users ADD UNIQUE KEY uniq_email (email)`);
+        } catch (e) {
+            if (!/Duplicate key name|Duplicate entry|check that column\/key exists/i.test(e.message)) {
+                console.warn('[schema] bỏ qua (UNIQUE email) — có thể có email trùng lặp sẵn trong DB:', e.message);
+            }
+        }
+        try {
+            await pool.execute(`ALTER TABLE users ADD UNIQUE KEY uniq_google_id (google_id)`);
+        } catch (e) {
+            if (!/Duplicate key name|check that column\/key exists/i.test(e.message)) {
+                console.warn('[schema] bỏ qua (UNIQUE google_id):', e.message);
             }
         }
 
@@ -243,6 +299,10 @@ app.post('/api/login', async(req, res) => {
 app.post('/api/register', async(req, res) => {
     try {
         const { username, password, name } = req.body;
+        // FIX (quên mật khẩu): thu thập email ngay lúc đăng ký — không bắt
+        // buộc (để không phá vỡ luồng đăng ký cũ), nhưng nếu không có email,
+        // tài khoản sẽ không dùng được tính năng "Quên mật khẩu" sau này.
+        const email = (req.body.email || '').trim() || null;
         if (!username || !password || !name)
             return res.status(400).json({ message: 'Vui lòng nhập đầy đủ thông tin' });
         if (password.length < 6)
@@ -251,15 +311,142 @@ app.post('/api/register', async(req, res) => {
         const exists = await q1('SELECT id FROM users WHERE username = ?', [username]);
         if (exists) return res.status(409).json({ message: 'Tên đăng nhập đã tồn tại' });
 
+        if (email) {
+            const emailTaken = await q1('SELECT id FROM users WHERE email = ?', [email]);
+            if (emailTaken) return res.status(409).json({ message: 'Email đã được dùng bởi tài khoản khác' });
+        }
+
         const hash = bcrypt.hashSync(password, 10);
         const result = await q(
-            'INSERT INTO users (username, password, fullname, name, role) VALUES (?,?,?,?,?)', [username, hash, name, name, 'user']
+            'INSERT INTO users (username, password, fullname, name, email, role) VALUES (?,?,?,?,?,?)', [username, hash, name, name, email, 'user']
         );
         const user = await q1('SELECT * FROM users WHERE id = ?', [result.insertId]);
         const token = jwt.sign({ id: user.id, username: user.username, role: user.role || 'user' },
             SECRET, { expiresIn: '30d' }
         );
         res.status(201).json({...safeUser(user), token });
+    } catch (e) {
+        console.error('[server]', e.message);
+        res.status(500).json({ message: 'Lỗi server' });
+    }
+});
+
+// ── FIX: Quên mật khẩu — bước 1: yêu cầu gửi email đặt lại mật khẩu ──
+// Luôn trả về cùng 1 thông điệp thành công dù email có tồn tại hay không,
+// để tránh lộ thông tin "email này có trong hệ thống hay không" (user
+// enumeration) cho kẻ dò quét.
+app.post('/api/forgot-password', async(req, res) => {
+    const genericMsg = { message: 'Nếu email tồn tại trong hệ thống, một liên kết đặt lại mật khẩu đã được gửi.' };
+    try {
+        const email = (req.body.email || '').trim();
+        if (!email) return res.status(400).json({ message: 'Vui lòng nhập email' });
+
+        const user = await q1('SELECT id, email FROM users WHERE email = ?', [email]);
+        if (!user) return res.json(genericMsg); // không tiết lộ email không tồn tại
+
+        // Token thô gửi cho user qua email; chỉ bản băm SHA-256 được lưu ở DB.
+        const rawToken = crypto.randomBytes(32).toString('hex');
+        const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+        const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 phút
+
+        // Vô hiệu hoá các token cũ chưa dùng của user này trước khi tạo token mới.
+        await q('UPDATE password_resets SET used = 1 WHERE user_id = ? AND used = 0', [user.id]);
+        await q('INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?,?,?)',
+            [user.id, tokenHash, expiresAt]);
+
+        const resetLink = `${APP_URL}/reset-password.html?token=${rawToken}`;
+        try {
+            await sendResetPasswordEmail(user.email, resetLink);
+        } catch (mailErr) {
+            // Không để lỗi gửi mail rò rỉ ra ngoài (vẫn trả thông điệp chung),
+            // nhưng log lại để dev biết SMTP_USER/SMTP_PASS có vấn đề.
+            console.error('[forgot-password] Gửi email thất bại:', mailErr.message);
+        }
+        res.json(genericMsg);
+    } catch (e) {
+        console.error('[server]', e.message);
+        res.status(500).json({ message: 'Lỗi server' });
+    }
+});
+
+// ── FIX: Quên mật khẩu — bước 2: xác nhận token + đặt mật khẩu mới ──
+app.post('/api/reset-password', async(req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+        if (!token || !newPassword) return res.status(400).json({ message: 'Thiếu thông tin' });
+        if (newPassword.length < 6) return res.status(400).json({ message: 'Mật khẩu mới tối thiểu 6 ký tự' });
+
+        const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+        const reset = await q1(
+            `SELECT * FROM password_resets
+             WHERE token_hash = ? AND used = 0 AND expires_at > NOW()
+             ORDER BY id DESC LIMIT 1`, [tokenHash]
+        );
+        if (!reset) return res.status(400).json({ message: 'Liên kết không hợp lệ hoặc đã hết hạn' });
+
+        const hash = bcrypt.hashSync(newPassword, 10);
+        await q('UPDATE users SET password = ? WHERE id = ?', [hash, reset.user_id]);
+        await q('UPDATE password_resets SET used = 1 WHERE id = ?', [reset.id]);
+
+        res.json({ message: 'Đặt lại mật khẩu thành công, vui lòng đăng nhập lại' });
+    } catch (e) {
+        console.error('[server]', e.message);
+        res.status(500).json({ message: 'Lỗi server' });
+    }
+});
+
+// ── FIX: Đăng nhập bằng Google (Google Identity Services) ──
+// Frontend dùng Google Sign-In để lấy `credential` (ID token JWT do Google
+// ký) rồi gửi lên đây. Server xác thực chữ ký với Google (KHÔNG tự tin vào
+// bất kỳ thông tin nào client tự khai) rồi mới tìm/tạo user tương ứng.
+app.post('/api/auth/google', async(req, res) => {
+    try {
+        const { credential } = req.body;
+        if (!credential) return res.status(400).json({ message: 'Thiếu thông tin đăng nhập Google' });
+
+        let payload;
+        try {
+            const ticket = await googleClient.verifyIdToken({
+                idToken: credential,
+                audience: process.env.GOOGLE_CLIENT_ID,
+            });
+            payload = ticket.getPayload();
+        } catch (verifyErr) {
+            return res.status(401).json({ message: 'Token Google không hợp lệ' });
+        }
+
+        const { sub: googleId, email, name, picture } = payload;
+        if (!email) return res.status(400).json({ message: 'Tài khoản Google không có email' });
+
+        // Ưu tiên tìm theo google_id (ổn định lâu dài), nếu chưa có thì tìm
+        // theo email để LIÊN KẾT với tài khoản thường (username/password) đã
+        // tồn tại sẵn — tránh tạo ra 2 tài khoản trùng cho cùng 1 người.
+        let user = await q1('SELECT * FROM users WHERE google_id = ?', [googleId]);
+        if (!user) {
+            user = await q1('SELECT * FROM users WHERE email = ?', [email]);
+            if (user) {
+                await q('UPDATE users SET google_id = ? WHERE id = ?', [googleId, user.id]);
+            } else {
+                // Tạo tài khoản mới — không có mật khẩu nội bộ (chỉ đăng nhập
+                // qua Google). username tự sinh từ email để tránh trùng cột
+                // username NOT NULL/UNIQUE sẵn có trong bảng users.
+                let username = 'gg_' + email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '').slice(0, 40);
+                if (await q1('SELECT id FROM users WHERE username = ?', [username])) {
+                    username = username + '_' + googleId.slice(-6);
+                }
+                const result = await q(
+                    `INSERT INTO users (username, password, fullname, name, email, avatar, google_id, role)
+                     VALUES (?,NULL,?,?,?,?,?,?)`,
+                    [username, name || email, name || email, email, picture || null, googleId, 'user']
+                );
+                user = await q1('SELECT * FROM users WHERE id = ?', [result.insertId]);
+            }
+        }
+
+        const jwtToken = jwt.sign({ id: user.id, username: user.username, role: user.role || 'user' },
+            SECRET, { expiresIn: '30d' }
+        );
+        res.json({...safeUser(user), token: jwtToken });
     } catch (e) {
         console.error('[server]', e.message);
         res.status(500).json({ message: 'Lỗi server' });

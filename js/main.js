@@ -19,6 +19,8 @@ window.API = window.location.hostname === 'localhost' || window.location.hostnam
     'http://localhost:3000' :
     '';
 
+window.GOOGLE_CLIENT_ID = '646271056780-6ncco8u40nmap223cacc1muaev4rbb9r.apps.googleusercontent.com'; 
+
 /* ── Expose globals for inline onclick handlers ── */
 window.toggleHideStudied = toggleHideStudied;
 window.setFlashcardModeAll = function() {

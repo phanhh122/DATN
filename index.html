@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.css"></link>
     <script type="module" src="https://unpkg.com/ionicons@8.0.13/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@8.0.13/dist/ionicons/ionicons.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 
 <body>
@@ -226,14 +227,18 @@
                     <span class="hanzi">汉字学园</span>
                     <div class="subtitle">Nền tảng học tiếng Trung</div>
                 </div>
-
+ 
                 <div class="auth-tabs">
                     <button type="button" class="auth-tab active" id="tab-login" onclick="window.switchAuthTab && window.switchAuthTab('login')">Đăng nhập</button>
                     <button type="button" class="auth-tab" id="tab-register" onclick="window.switchAuthTab && window.switchAuthTab('register')">Đăng ký</button>
                 </div>
-
+ 
                 <div id="auth-error" class="auth-error"></div>
-
+ 
+                <!-- Đăng nhập Google — Google Identity Services tự render nút vào đây -->
+                <div id="google-signin-btn" style="display:flex;justify-content:center;margin-bottom:10px"></div>
+                <div class="auth-divider" style="text-align:center;color:#999;font-size:13px;margin:2px 0 12px">hoặc</div>
+ 
                 <form id="login-form" class="auth-form">
                     <div class="form-group">
                         <label>Tên đăng nhập</label>
@@ -245,11 +250,12 @@
                                 <input type="password" id="login-pass" placeholder="Nhập mật khẩu" autocomplete="current-password">
                                 <button type="button" class="pw-toggle-btn" onclick="togglePasswordVisibility(this)"><i class="fa-solid fa-eye"></i></button>
                             </div>
+                        <p style="text-align:right;margin:6px 0 0"><a href="#" onclick="window.switchAuthTab('forgot');return false" style="font-size:13px">Quên mật khẩu?</a></p>
                     </div>
                     <button type="submit" class="btn btn-primary" style="margin-top:4px">Đăng nhập</button>
                     <p class="auth-switch-hint">Chưa có tài khoản? <a href="#" onclick="window.switchAuthTab('register');return false">Đăng ký ngay</a></p>
                 </form>
-
+ 
                 <form id="register-form" class="auth-form" style="display:none">
                     <div class="form-group">
                         <label>Họ và tên</label>
@@ -260,6 +266,10 @@
                         <input type="text" id="reg-user" placeholder="Nhập tên đăng nhập">
                     </div>
                     <div class="form-group">
+                        <label>Email <span style="color:#999;font-weight:400">(để khôi phục mật khẩu sau này)</span></label>
+                        <input type="email" id="reg-email" placeholder="Nhập email">
+                    </div>
+                    <div class="form-group">
                         <label>Mật khẩu</label>
                         <div class="pw-field">
                             <input type="password" id="reg-pass" placeholder="Tối thiểu 6 ký tự">
@@ -268,6 +278,16 @@
                     </div>
                     <button type="submit" class="btn btn-primary">Tạo tài khoản</button>
                     <p class="auth-switch-hint">Đã có tài khoản? <a href="#" onclick="window.switchAuthTab('login');return false">Đăng nhập</a></p>
+                </form>
+ 
+                <form id="forgot-form" class="auth-form" style="display:none">
+                    <p style="font-size:14px;color:#666;margin:0 0 4px">Nhập email đã đăng ký, chúng tôi sẽ gửi liên kết đặt lại mật khẩu.</p>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="forgot-email" placeholder="Nhập email đã đăng ký">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="margin-top:4px">Gửi liên kết đặt lại</button>
+                    <p class="auth-switch-hint"><a href="#" onclick="window.switchAuthTab('login');return false">← Quay lại đăng nhập</a></p>
                 </form>
             </div>
         </div>
@@ -1158,11 +1178,20 @@
 
         // Auth tab bridge
         window._pendingAuthTab = null;
-        window.switchAuthTab = function(tab) {
+            window.switchAuthTab = function(tab) {
             document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
             document.getElementById('login-form').style.display = tab === 'login' ? 'flex' : 'none';
             document.getElementById('register-form').style.display = tab === 'register' ? 'flex' : 'none';
-            document.getElementById(tab === 'login' ? 'tab-login' : 'tab-register').classList.add('active');
+            document.getElementById('forgot-form').style.display = tab === 'forgot' ? 'flex' : 'none';
+            // Tab "Quên mật khẩu" không có nút tab riêng — chỉ tô sáng login/register.
+            if (tab === 'login' || tab === 'register') {
+                document.getElementById(tab === 'login' ? 'tab-login' : 'tab-register').classList.add('active');
+            }
+            // Ẩn nút Google + gạch "hoặc" khi đang ở màn quên mật khẩu.
+            const googleWrap = document.getElementById('google-signin-btn');
+            const divider = document.querySelector('.auth-divider');
+            if (googleWrap) googleWrap.style.display = tab === 'forgot' ? 'none' : 'flex';
+            if (divider) divider.style.display = tab === 'forgot' ? 'none' : 'block';
             document.getElementById('auth-error').style.display = 'none';
             if (window._authReady) window._switchAuthTabImpl(tab);
             else window._pendingAuthTab = tab;

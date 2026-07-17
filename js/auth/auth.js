@@ -46,6 +46,74 @@ export async function initAuth({ onLogin }) {
     document.getElementById('auth-screen').style.display = 'none';
     document.getElementById('login-form').addEventListener('submit', handleLogin);
     document.getElementById('register-form').addEventListener('submit', handleRegister);
+    document.getElementById('forgot-form').addEventListener('submit', handleForgotPassword);
+
+    initGoogleSignIn();
+}
+
+// ── Đăng nhập Google (Google Identity Services) ──
+function initGoogleSignIn() {
+    if (!window.GOOGLE_CLIENT_ID || window.GOOGLE_CLIENT_ID.includes('YOUR_')) {
+        // Chưa cấu hình Client ID (xem window.GOOGLE_CLIENT_ID trong js/main.js) — bỏ qua, không render nút.
+        return;
+    }
+    function render() {
+        if (!window.google || !window.google.accounts) { setTimeout(render, 200); return; }
+        window.google.accounts.id.initialize({
+            client_id: window.GOOGLE_CLIENT_ID,
+            callback: handleGoogleCredential,
+        });
+        const el = document.getElementById('google-signin-btn');
+        if (el) {
+            window.google.accounts.id.renderButton(el, {
+                theme: 'outline', size: 'large', width: 320, text: 'continue_with', locale: 'vi',
+            });
+        }
+    }
+    render();
+}
+
+async function handleGoogleCredential(response) {
+    try {
+        const res = await fetch(`${window.API}/api/auth/google`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ credential: response.credential })
+        });
+        const data = await res.json();
+        if (!res.ok) { showError(data.message || 'Đăng nhập Google thất bại'); return; }
+
+        _currentUser = data;
+        localStorage.setItem('hsk_user', JSON.stringify(data));
+        syncResetMarker(data.progress_reset_at);
+        retryMigrationAfterLogin();
+        _onLoginCb(data);
+    } catch {
+        showError('Không thể kết nối máy chủ');
+    }
+}
+
+async function handleForgotPassword(e) {
+    e.preventDefault();
+    const email = document.getElementById('forgot-email').value.trim();
+    if (!email) { showError('Vui lòng nhập email'); return; }
+
+    try {
+        const res = await fetch(`${window.API}/api/forgot-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+        // Server luôn trả 200 với thông điệp chung (kể cả email không tồn tại) — xem comment trong server.js.
+        const el = document.getElementById('auth-error');
+        el.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + (data.message || 'Đã gửi yêu cầu');
+        el.style.display = 'block';
+        el.style.background = '#e6f7ee';
+        el.style.color = '#0a7a41';
+    } catch {
+        showError('Không thể kết nối máy chủ');
+    }
 }
 
 async function handleLogin(e) {
@@ -82,6 +150,7 @@ async function handleRegister(e) {
     e.preventDefault();
     const name     = document.getElementById('reg-name').value.trim();
     const username = document.getElementById('reg-user').value.trim();
+    const email    = document.getElementById('reg-email').value.trim();
     const password = document.getElementById('reg-pass').value;
 
     if (!name || !username || !password) { showError('Vui lòng nhập đầy đủ thông tin'); return; }
@@ -91,7 +160,7 @@ async function handleRegister(e) {
         const res = await fetch(`${window.API}/api/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, username, password })
+            body: JSON.stringify({ name, username, email, password })
         });
         const data = await res.json();
         if (!res.ok) { showError(data.message || 'Đăng ký thất bại'); return; }
@@ -108,7 +177,10 @@ function switchTab(tab) {
     document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
     document.getElementById('login-form').style.display    = tab === 'login'    ? 'flex' : 'none';
     document.getElementById('register-form').style.display = tab === 'register' ? 'flex' : 'none';
-    document.getElementById(tab === 'login' ? 'tab-login' : 'tab-register').classList.add('active');
+    document.getElementById('forgot-form').style.display   = tab === 'forgot'   ? 'flex' : 'none';
+    if (tab === 'login' || tab === 'register') {
+        document.getElementById(tab === 'login' ? 'tab-login' : 'tab-register').classList.add('active');
+    }
     document.getElementById('auth-error').style.display = 'none';
 }
 
@@ -116,6 +188,8 @@ function showError(msg) {
     const el = document.getElementById('auth-error');
     el.innerHTML = '<i class="fa-solid fa-exclamation-triangle"></i> ' + msg;
     el.style.display = 'block';
+    el.style.background = '';
+    el.style.color = '';
 }
 
 export function logout() {

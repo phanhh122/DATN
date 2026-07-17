@@ -1,7 +1,3 @@
-// chatbot/chatbot.js
-// ════════════════════════════════════════════════════════════════
-//  AI Chatbot với Intent Detection Pipeline
-//
 //  Luồng xử lý mỗi tin nhắn:
 //    User input
 //      → detectIntent()      — phân loại ý định (regex + heuristic)
