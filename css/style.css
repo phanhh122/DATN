@@ -112,7 +112,7 @@ body {
 
 .auth-logo .hanzi {
     font-family: 'Noto Serif SC', serif;
-    font-size: 56px;
+    font-size: 40px;
     font-weight: 900;
     background: linear-gradient(135deg, #4F46E5, #818CF8);
     -webkit-background-clip: text;
