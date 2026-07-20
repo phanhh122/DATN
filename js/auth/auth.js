@@ -100,7 +100,7 @@ async function handleForgotPassword(e) {
 
     const btn = e.target.querySelector('button[type="submit"]');
     const originalBtnText = btn ? btn.textContent : '';
-    if (btn) { btn.disabled = true; btn.textContent = 'Đang gửi... (có thể mất tới 1 phút nếu server vừa khởi động)'; }
+    if (btn) { btn.disabled = true; btn.textContent = 'Đang gửi... (có thể mất tới 1 phút)'; }
 
     const el = document.getElementById('auth-error');
     el.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang gửi yêu cầu...';

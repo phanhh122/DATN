@@ -336,7 +336,7 @@ app.post('/api/register', async(req, res) => {
 // để tránh lộ thông tin "email này có trong hệ thống hay không" (user
 // enumeration) cho kẻ dò quét.
 app.post('/api/forgot-password', async(req, res) => {
-    const genericMsg = { message: 'Nếu email tồn tại trong hệ thống, một liên kết đặt lại mật khẩu đã được gửi.' };
+    const genericMsg = { message: 'Một liên kết đặt lại mật khẩu đã được gửi.' };
     try {
         const email = (req.body.email || '').trim();
         if (!email) return res.status(400).json({ message: 'Vui lòng nhập email' });
@@ -938,6 +938,38 @@ app.get('/api/srs/upcoming', auth, async(req, res) => {
         res.json({ upcoming: rows, totalInSystem: total?.cnt || 0 });
     } catch (e) {
         console.error('[SRS /upcoming]', e.message);
+        res.status(500).json({ message: 'Lỗi server' });
+    }
+});
+
+// SRS Schedule 7 ngày: đếm số thẻ đến hạn theo từng ngày (hôm nay + 6 ngày tới),
+// dùng cho card "Lịch ôn 7 ngày tới" ở màn hình Hoàn thành buổi ôn tập.
+// CHỈ ĐỌC next_review_date đã được FSRS tính sẵn — không tính lại FSRS.
+app.get('/api/srs/schedule-7d', auth, async(req, res) => {
+    try {
+        const rows = await q(
+            `SELECT DATE_FORMAT(d.date_val, '%Y-%m-%d') AS date, COALESCE(cnt.c, 0) AS count
+             FROM (
+                 SELECT CURDATE() AS date_val
+                 UNION ALL SELECT DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+                 UNION ALL SELECT DATE_ADD(CURDATE(), INTERVAL 2 DAY)
+                 UNION ALL SELECT DATE_ADD(CURDATE(), INTERVAL 3 DAY)
+                 UNION ALL SELECT DATE_ADD(CURDATE(), INTERVAL 4 DAY)
+                 UNION ALL SELECT DATE_ADD(CURDATE(), INTERVAL 5 DAY)
+                 UNION ALL SELECT DATE_ADD(CURDATE(), INTERVAL 6 DAY)
+             ) d
+             LEFT JOIN (
+                 SELECT next_review_date, COUNT(*) AS c
+                 FROM word_progress
+                 WHERE user_id = ?
+                 GROUP BY next_review_date
+             ) cnt ON cnt.next_review_date = d.date_val
+             ORDER BY d.date_val ASC`,
+            [req.user.id]
+        );
+        res.json({ schedule: rows });
+    } catch (e) {
+        console.error('[SRS /schedule-7d]', e.message);
         res.status(500).json({ message: 'Lỗi server' });
     }
 });

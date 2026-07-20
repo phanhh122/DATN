@@ -3,15 +3,15 @@ import { speakText } from '../components/tts.js';
 import { showToast } from '../components/toast.js';
 import { recordStudyDay, markStudied } from '../storage/storage.js';
 
-let _cards       = [];   // tất cả thẻ trong session (due trước, new sau)
-let _dueCount    = 0;    // số thẻ đến hạn thực sự (index 0 → _dueCount-1)
-let _idx         = 0;
-let _flipped     = false;
-let _sessionLog  = [];
-let _stats       = { again:0, hard:0, good:0, easy:0 };
+let _cards = [];   // tất cả thẻ trong session (due trước, new sau)
+let _dueCount = 0;    // số thẻ đến hạn thực sự (index 0 → _dueCount-1)
+let _idx = 0;
+let _flipped = false;
+let _sessionLog = [];
+let _stats = { again: 0, hard: 0, good: 0, easy: 0 };
 let _initialized = false;
-let _token       = null;
-let _shownTransition = false; 
+let _token = null;
+let _shownTransition = false;
 let _pendingReviews = [];
 
 
@@ -26,8 +26,8 @@ function _getToken() {
 export async function initSRS() {
     _token = _getToken();
     _initialized = false;
-    _sessionLog  = [];
-    _stats       = { again:0, hard:0, good:0, easy:0 };
+    _sessionLog = [];
+    _stats = { again: 0, hard: 0, good: 0, easy: 0 };
     _shownTransition = false;
     _pendingReviews = [];
 
@@ -39,7 +39,7 @@ export async function initSRS() {
         });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
-        _cards    = data.cards || [];
+        _cards = data.cards || [];
         _dueCount = data.dueCount || 0;
 
         // FIX: các số đếm trong legend ("Cần ôn (X)" / "Từ mới (Y)") chưa từng
@@ -60,7 +60,7 @@ export async function initSRS() {
         return;
     }
 
-    _idx     = 0;
+    _idx = 0;
     _flipped = false;
     _showSection('srs-session');
     renderSRSCard();
@@ -86,19 +86,19 @@ function renderSRSCard() {
     if (card) card.classList.remove('flipped');
 
     // ── Nội dung ──
-    _setText('srs-hanzi',          w.hanzi);
-    _setText('srs-back-hanzi',     w.hanzi);
-    _setText('srs-pinyin',         w.pinyin || '');
-    _setText('srs-meaning',        w.meaning || '');
-    _setText('srs-example-zh',     w.example || '');
+    _setText('srs-hanzi', w.hanzi);
+    _setText('srs-back-hanzi', w.hanzi);
+    _setText('srs-pinyin', w.pinyin || '');
+    _setText('srs-meaning', w.meaning || '');
+    _setText('srs-example-zh', w.example || '');
     _setText('srs-example-pinyin', w.example_pinyin || '');
-    _setText('srs-example-meaning',w.example_meaning || '');
+    _setText('srs-example-meaning', w.example_meaning || '');
 
     // ── Badge: "Cần ôn" vs "Mới" ──
     const dueBadge = document.getElementById('srs-due-badge');
     const newBadge = document.getElementById('srs-new-badge');
-    if (dueBadge) dueBadge.style.display = isDue  ? 'inline-block' : 'none';
-    if (newBadge) newBadge.style.display  = !isDue && w.isNew ? 'inline-block' : 'none';
+    if (dueBadge) dueBadge.style.display = isDue ? 'inline-block' : 'none';
+    if (newBadge) newBadge.style.display = !isDue && w.isNew ? 'inline-block' : 'none';
 
     // ── Màu viền card theo loại ──
     if (card) {
@@ -126,14 +126,14 @@ function renderSRSCard() {
 
     // ── Counter ──
     _setText('srs-current', _idx + 1);
-    _setText('srs-total',   _cards.length);
+    _setText('srs-total', _cards.length);
 
     // ── Label section ──
     const sectionEl = document.getElementById('srs-section-label');
     if (sectionEl) {
         if (isDue) {
             const doneCount = _idx;
-            const leftDue   = _dueCount - _idx;
+            const leftDue = _dueCount - _idx;
             sectionEl.innerHTML = `<span class="srs-label-due"><i class="fa-solid fa-bell"></i> Ôn tập đến hạn</span>
                 <span style="color:var(--muted);font-size:12px">Còn ${leftDue} thẻ đến hạn</span>`;
         } else {
@@ -155,25 +155,25 @@ function renderProgressBar() {
     const bar = document.getElementById('srs-progress');
     if (!bar) return;
 
-    const total    = _cards.length;
-    const doneAll  = _idx;
-    const doneDue  = Math.min(_idx, _dueCount);
-    const doneNew  = Math.max(0, _idx - _dueCount);
-    const duePct   = _dueCount   > 0 ? (_dueCount / total * 100).toFixed(1) : 0;
-    const newPct   = (total - _dueCount) > 0 ? ((total - _dueCount) / total * 100).toFixed(1) : 0;
-    const fillDue  = _dueCount   > 0 ? (doneDue  / _dueCount * duePct).toFixed(1)              : 0;
-    const fillNew  = (total - _dueCount) > 0 ? (doneNew / (total - _dueCount) * newPct).toFixed(1) : 0;
+    const total = _cards.length;
+    const doneAll = _idx;
+    const doneDue = Math.min(_idx, _dueCount);
+    const doneNew = Math.max(0, _idx - _dueCount);
+    const duePct = _dueCount > 0 ? (_dueCount / total * 100).toFixed(1) : 0;
+    const newPct = (total - _dueCount) > 0 ? ((total - _dueCount) / total * 100).toFixed(1) : 0;
+    const fillDue = _dueCount > 0 ? (doneDue / _dueCount * duePct).toFixed(1) : 0;
+    const fillNew = (total - _dueCount) > 0 ? (doneNew / (total - _dueCount) * newPct).toFixed(1) : 0;
 
     // Dùng thanh kép: 2 màu gradient
-    bar.style.width      = '100%';
+    bar.style.width = '100%';
     bar.style.background = 'none';
     bar.innerHTML = `
         <div style="display:flex;height:100%;border-radius:4px;overflow:hidden;width:100%">
             ${_dueCount > 0 ? `<div style="width:${duePct}%;background:#e2e8f0;position:relative;border-right:2px solid var(--surface,#fff)">
-                <div style="width:${doneDue > 0 ? (doneDue/_dueCount*100).toFixed(0) : 0}%;height:100%;background:linear-gradient(90deg,#e67e22,#e74c3c);transition:width .3s;border-radius:4px 0 0 4px"></div>
+                <div style="width:${doneDue > 0 ? (doneDue / _dueCount * 100).toFixed(0) : 0}%;height:100%;background:linear-gradient(90deg,#e67e22,#e74c3c);transition:width .3s;border-radius:4px 0 0 4px"></div>
             </div>` : ''}
             ${(total - _dueCount) > 0 ? `<div style="flex:1;background:#e2e8f0;position:relative">
-                <div style="width:${doneNew > 0 ? (doneNew/(total-_dueCount)*100).toFixed(0) : 0}%;height:100%;background:linear-gradient(90deg,#27ae60,#2ecc71);transition:width .3s;border-radius:${_dueCount===0?'4px':'0'} 4px 4px ${_dueCount===0?'4px':'0'}"></div>
+                <div style="width:${doneNew > 0 ? (doneNew / (total - _dueCount) * 100).toFixed(0) : 0}%;height:100%;background:linear-gradient(90deg,#27ae60,#2ecc71);transition:width .3s;border-radius:${_dueCount === 0 ? '4px' : '0'} 4px 4px ${_dueCount === 0 ? '4px' : '0'}"></div>
             </div>` : ''}
         </div>`;
 }
@@ -201,9 +201,9 @@ export function flipSRSCard() {
 
 export async function rateSRSCard(rating) {
     if (!_initialized || _idx >= _cards.length) return;
-    if (![1,2,3,4].includes(rating)) return;
+    if (![1, 2, 3, 4].includes(rating)) return;
     const w = _cards[_idx];
-    const labels = { 1:'again', 2:'hard', 3:'good', 4:'easy' };
+    const labels = { 1: 'again', 2: 'hard', 3: 'good', 4: 'easy' };
     _stats[labels[rating]]++;
     _sessionLog.push({ word_id: w.id, rating });
     markStudied(String(w.id));
@@ -241,17 +241,17 @@ export async function rateSRSCard(rating) {
 // ── Result 
 function showSRSResult() {
     _showSection('srs-result');
-    const total   = _sessionLog.length;
+    const total = _sessionLog.length;
     const correct = _stats.good + _stats.easy;
-    const pct     = total ? Math.round((correct / total) * 100) : 0;
+    const pct = total ? Math.round((correct / total) * 100) : 0;
 
-    _setText('srs-result-total',   total);
+    _setText('srs-result-total', total);
     _setText('srs-result-correct', correct);
-    _setText('srs-result-pct',     pct + '%');
-    _setText('srs-result-again',   _stats.again);
-    _setText('srs-result-hard',    _stats.hard);
-    _setText('srs-result-good',    _stats.good);
-    _setText('srs-result-easy',    _stats.easy);
+    _setText('srs-result-pct', pct + '%');
+    _setText('srs-result-again', _stats.again);
+    _setText('srs-result-hard', _stats.hard);
+    _setText('srs-result-good', _stats.good);
+    _setText('srs-result-easy', _stats.easy);
 
     // Breakdown: thẻ đến hạn vs thẻ mới
     const breakEl = document.getElementById('srs-result-breakdown');
@@ -267,14 +267,64 @@ function showSRSResult() {
     }
 
     const msg = pct >= 90 ? '<Xuất sắc! Bộ nhớ dài hạn của bạn rất tốt!'
-              : pct >= 70 ? 'Tốt lắm! Tiếp tục duy trì!'
-              : pct >= 50 ? 'Cần luyện thêm — FSRS sẽ ưu tiên các từ bạn chưa nhớ.'
-              : 'Đừng nản! FSRS sẽ lên lịch ôn lại đúng lúc để giúp bạn nhớ lâu hơn.';
+        : pct >= 70 ? 'Tốt lắm! Tiếp tục duy trì!'
+            : pct >= 50 ? 'Cần luyện thêm — FSRS sẽ ưu tiên các từ bạn chưa nhớ.'
+                : 'Đừng nản! FSRS sẽ lên lịch ôn lại đúng lúc để giúp bạn nhớ lâu hơn.';
     _setText('srs-result-msg', msg);
+
+    _loadResultSchedule();
+}
+
+// ── Lịch ôn 7 ngày tới (màn hình Hoàn thành buổi ôn tập) ──────
+async function _loadResultSchedule() {
+    const el = document.getElementById('srs-result-schedule');
+    if (!el) return;
+    el.innerHTML = '';
+
+    try {
+        const res = await fetch(`${window.API}/api/srs/schedule-7d`, {
+            headers: { Authorization: `Bearer ${_token}` }
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        const schedule = data.schedule || [];
+        if (!schedule.length) return;
+
+        const todayStr = _localDateStr(new Date());
+        el.innerHTML = `
+            <div class="section-title" style="margin:8px 0 12px;text-align:left">
+                <i class="fa-solid fa-calendar-days"></i> Lịch ôn 7 ngày tới
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:24px;text-align:left">
+                ${schedule.map(d => {
+            const label = d.date === todayStr ? 'Hôm nay' : _formatVNDate(d.date);
+            return `<div style="display:flex;justify-content:space-between;align-items:center;
+                        padding:8px 14px;background:var(--surface2,rgba(108,99,255,.07));
+                        border:1px solid var(--border);border-radius:8px;font-size:13px">
+                        <span><i class="fa-solid fa-calendar-day" style="color:var(--primary);margin-right:6px"></i>${label}</span>
+                        <strong>${d.count} thẻ</strong>
+                    </div>`;
+        }).join('')}
+            </div>`;
+    } catch (e) {
+        console.error('[SRS /schedule-7d]', e);
+    }
+}
+
+function _localDateStr(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
+function _formatVNDate(dateStr) {
+    const [y, m, d] = dateStr.split('-');
+    return `${d}/${m}/${y}`;
 }
 
 function _showSection(id) {
-    ['srs-loading','srs-session','srs-empty','srs-result'].forEach(s => {
+    ['srs-loading', 'srs-session', 'srs-empty', 'srs-result'].forEach(s => {
         const el = document.getElementById(s);
         if (el) el.style.display = s === id ? 'block' : 'none';
     });
@@ -329,13 +379,13 @@ async function _loadUpcoming() {
                         `<div style="margin-bottom:16px">
                             <div style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:8px">${label} (${words.length} thẻ)</div>
                             <div style="display:flex;flex-wrap:wrap;gap:8px">
-                                ${words.slice(0,8).map(w =>
-                                    `<span style="background:var(--surface2,rgba(108,99,255,.07));border:1px solid var(--border);
+                                ${words.slice(0, 8).map(w =>
+                            `<span style="background:var(--surface2,rgba(108,99,255,.07));border:1px solid var(--border);
                                         border-radius:8px;padding:4px 12px;font-size:13px">
                                         <strong>${w.hanzi}</strong> ${w.meaning}
                                     </span>`
-                                ).join('')}
-                                ${words.length > 8 ? `<span style="color:var(--muted);font-size:12px;padding:4px">+${words.length-8} từ nữa</span>` : ''}
+                        ).join('')}
+                                ${words.length > 8 ? `<span style="color:var(--muted);font-size:12px;padding:4px">+${words.length - 8} từ nữa</span>` : ''}
                             </div>
                         </div>`
                     ).join('');
