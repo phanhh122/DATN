@@ -1,6 +1,3 @@
-// backend/mailer.js
-// Gửi email quên mật khẩu qua Gmail SMTP (dùng App Password, KHÔNG dùng mật khẩu Gmail thật).
-// Cách lấy App Password: xem hướng dẫn Claude đã đưa kèm phần .env.
 const nodemailer = require('nodemailer');
 
 let transporter = null;
@@ -10,6 +7,8 @@ function getTransporter() {
         host: 'smtp.gmail.com',
         port: 465,
         secure: true, // TLS trực tiếp trên cổng 465 — một số nền tảng cloud chặn cổng 587 (STARTTLS)
+        family: 4, // ép dùng IPv4 — nhiều nền tảng cloud (Render...) không có route IPv6 outbound,
+                   // khiến Node cố kết nối qua IPv6 của Gmail rồi báo lỗi ENETUNREACH
         auth: {
             user: process.env.SMTP_USER,
             pass: process.env.SMTP_PASS,
