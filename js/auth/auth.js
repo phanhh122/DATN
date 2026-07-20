@@ -98,21 +98,46 @@ async function handleForgotPassword(e) {
     const email = document.getElementById('forgot-email').value.trim();
     if (!email) { showError('Vui lòng nhập email'); return; }
 
+    const btn = e.target.querySelector('button[type="submit"]');
+    const originalBtnText = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = 'Đang gửi... (có thể mất tới 1 phút nếu server vừa khởi động)'; }
+
+    const el = document.getElementById('auth-error');
+    el.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang gửi yêu cầu...';
+    el.style.display = 'block';
+    el.style.background = '#eef2ff';
+    el.style.color = '#3730a3';
+
     try {
         const res = await fetch(`${window.API}/api/forgot-password`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email })
         });
-        const data = await res.json();
+
+        let data = {};
+        try { data = await res.json(); } catch (parseErr) {
+            console.error('[forgot-password] Server không trả JSON hợp lệ:', parseErr);
+            showError(`Server phản hồi bất thường (HTTP ${res.status}). Kiểm tra log Render.`);
+            return;
+        }
+
+        if (!res.ok) {
+            console.error('[forgot-password] HTTP', res.status, data);
+            showError(data.message || `Gửi yêu cầu thất bại (HTTP ${res.status})`);
+            return;
+        }
+
         // Server luôn trả 200 với thông điệp chung (kể cả email không tồn tại) — xem comment trong server.js.
-        const el = document.getElementById('auth-error');
         el.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + (data.message || 'Đã gửi yêu cầu');
         el.style.display = 'block';
         el.style.background = '#e6f7ee';
         el.style.color = '#0a7a41';
-    } catch {
-        showError('Không thể kết nối máy chủ');
+    } catch (err) {
+        console.error('[forgot-password] Lỗi kết nối:', err);
+        showError('Không thể kết nối máy chủ. Kiểm tra tab Network (F12) hoặc thử lại sau vài giây.');
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = originalBtnText; }
     }
 }
 

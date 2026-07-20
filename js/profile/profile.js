@@ -36,6 +36,15 @@ function populateForm(u) {
     setValue('pf-birthday', u.birthday ? u.birthday.split('T')[0] : '');
     setValue('pf-gender',   u.gender || '');
     setValue('pf-goal',     u.learning_goal || '');
+
+    const emailInput = document.getElementById('pf-email');
+    const emailHint  = document.getElementById('pf-email-hint');
+    const isGoogleLinked = !!u.google_id;
+    if (emailInput) {
+        emailInput.disabled = isGoogleLinked;
+        emailInput.style.opacity = isGoogleLinked ? '.6' : '';
+    }
+    if (emailHint) emailHint.style.display = isGoogleLinked ? 'block' : 'none';
 }
 
 function updateProfileCard(u) {
@@ -61,14 +70,17 @@ function updateProfileCard(u) {
 }
 
 export async function saveProfile() {
+    const emailInput = document.getElementById('pf-email');
+    const emailLocked = !!emailInput?.disabled;
+
     const payload = {
         name:          getValue('pf-name'),
-        email:         getValue('pf-email'),
         birthday:      getValue('pf-birthday'),
         gender:        getValue('pf-gender'),
         learning_goal: getValue('pf-goal'),
     };
-
+    
+    if (!emailLocked) payload.email = getValue('pf-email');
     if (!payload.name) { showToast('Vui lòng nhập họ tên', 'error'); return; }
     if (payload.email && !isValidEmail(payload.email)) { showToast('Email không hợp lệ', 'error'); return; }
 

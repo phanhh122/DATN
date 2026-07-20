@@ -468,7 +468,7 @@ app.get('/api/profile', auth, async(req, res) => {
         const user = await q1(
             `SELECT id, username, fullname, name, email, birthday, gender,
                     learning_goal, avatar, role, streak, words_learned, last_active_date,
-                    progress_reset_at
+                    progress_reset_at, google_id
              FROM users WHERE id = ?`, [req.user.id]
         );
         if (!user) return res.status(404).json({ message: 'Không tìm thấy người dùng' });
@@ -482,7 +482,12 @@ app.get('/api/profile', auth, async(req, res) => {
 app.put('/api/profile', auth, async(req, res) => {
     try {
         const { name, email, birthday, gender, learning_goal, avatar } = req.body;
-
+        if (email !== undefined) {
+            const current = await q1('SELECT email, google_id FROM users WHERE id = ?', [req.user.id]);
+            if (current && current.google_id && email !== current.email) {
+                return res.status(403).json({ message: 'Email được quản lý bởi tài khoản Google, không thể chỉnh sửa tại đây' });
+            }
+        }
         // Kiểm tra email trùng
         if (email) {
             const dup = await q1('SELECT id FROM users WHERE email = ? AND id != ?', [email, req.user.id]);
@@ -527,7 +532,7 @@ app.put('/api/profile', auth, async(req, res) => {
         const updated = await q1(
             `SELECT id, username, fullname, name, email, birthday, gender,
                     learning_goal, avatar, role, streak, words_learned, last_active_date,
-                    progress_reset_at
+                    progress_reset_at, google_id
              FROM users WHERE id = ?`, [req.user.id]
         );
         res.json(safeUser(updated));
