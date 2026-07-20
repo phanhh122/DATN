@@ -1,3 +1,4 @@
+
 const nodemailer = require('nodemailer');
 
 let transporter = null;
@@ -28,7 +29,7 @@ async function sendResetPasswordEmail(toEmail, resetLink) {
         subject: 'Đặt lại mật khẩu - HSK Flashcard',
         html: `
             <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto">
-                <h2 style="color:#4f46e5">汉字学园 · HSK Flashcard</h2>
+                <h2 style="color:#4f46e5">HSK Flashcard</h2>
                 <p>Bạn (hoặc ai đó) vừa yêu cầu đặt lại mật khẩu cho tài khoản này.</p>
                 <p>Nhấn vào nút bên dưới để đặt mật khẩu mới. Liên kết có hiệu lực trong <b>30 phút</b>.</p>
                 <p style="text-align:center;margin:24px 0">
