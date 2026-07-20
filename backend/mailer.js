@@ -7,11 +7,16 @@ let transporter = null;
 function getTransporter() {
     if (transporter) return transporter;
     transporter = nodemailer.createTransport({
-        service: 'gmail',
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true, // TLS trực tiếp trên cổng 465 — một số nền tảng cloud chặn cổng 587 (STARTTLS)
         auth: {
             user: process.env.SMTP_USER,
             pass: process.env.SMTP_PASS,
         },
+        connectionTimeout: 20000, // 20s thay vì mặc định ~10s, phòng mạng cloud chậm bắt tay
+        greetingTimeout: 20000,
+        socketTimeout: 20000,
     });
     return transporter;
 }
@@ -19,7 +24,7 @@ function getTransporter() {
 async function sendResetPasswordEmail(toEmail, resetLink) {
     const tx = getTransporter();
     await tx.sendMail({
-        from: `"HSK Flashcard 汉字学园" <${process.env.SMTP_USER}>`,
+        from: `"HSK Flashcard" <${process.env.SMTP_USER}>`,
         to: toEmail,
         subject: 'Đặt lại mật khẩu - HSK Flashcard',
         html: `
